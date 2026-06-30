@@ -1,0 +1,65 @@
+import type { FastifyInstance } from 'fastify'
+import { prisma } from '../db'
+
+// Эндпоинты единого справочника: категории, бренды, модели (для автоподстановки).
+// Поиск по названию, алиасам и артикулу; без учёта регистра; не более 20 результатов.
+export async function directoryRoutes(app: FastifyInstance) {
+  // GET /api/categories — дерево категорий (плоско, с parentId).
+  app.get('/api/categories', async () => {
+    return prisma.category.findMany({
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, slug: true, parentId: true },
+    })
+  })
+
+  // GET /api/brands?q=nb — бренды по названию или алиасу.
+  app.get<{ Querystring: { q?: string } }>('/api/brands', async (req) => {
+    const q = (req.query.q ?? '').trim()
+    const ql = q.toLowerCase()
+    return prisma.brand.findMany({
+      where: q
+        ? { OR: [{ name: { contains: q, mode: 'insensitive' } }, { aliases: { has: ql } }] }
+        : undefined,
+      orderBy: { name: 'asc' },
+      take: 20,
+      select: { id: true, name: true },
+    })
+  })
+
+  // GET /api/models?q=&brandId=&categoryId= — модели по названию/алиасу/артикулу,
+  // с опциональными фильтрами по бренду и категории.
+  app.get<{ Querystring: { q?: string; brandId?: string; categoryId?: string } }>(
+    '/api/models',
+    async (req) => {
+      const q = (req.query.q ?? '').trim()
+      const ql = q.toLowerCase()
+      const brandId = req.query.brandId ? Number(req.query.brandId) : undefined
+      const categoryId = req.query.categoryId ? Number(req.query.categoryId) : undefined
+      return prisma.model.findMany({
+        where: {
+          ...(q
+            ? {
+                OR: [
+                  { name: { contains: q, mode: 'insensitive' } },
+                  { aliases: { has: ql } },
+                  { sku: { contains: q, mode: 'insensitive' } },
+                ],
+              }
+            : {}),
+          ...(brandId ? { brandId } : {}),
+          ...(categoryId ? { categoryId } : {}),
+        },
+        orderBy: { name: 'asc' },
+        take: 20,
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          brandId: true,
+          brand: { select: { id: true, name: true } },
+          category: { select: { id: true, name: true, slug: true } },
+        },
+      })
+    },
+  )
+}

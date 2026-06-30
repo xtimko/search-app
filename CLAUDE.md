@@ -1,0 +1,88 @@
+# CLAUDE.md — Память проекта «СтокПоиск»
+
+> Этот файл Claude Code читает АВТОМАТИЧЕСКИ при каждом запуске.
+> Здесь — суть проекта, правила работы и КАРТА ФАЙЛОВ.
+> Папка проекта одновременно является волтом Obsidian: открой её как vault.
+
+---
+
+## 1. Суть проекта (в одном абзаце)
+
+VK Mini App — **мультикатегорийный** агрегатор стока для реселлеров (обувь/кроссовки, одежда, аксессуары — часы, сумки, головные уборы, украшения, люкс, коллекционное). Две стороны: **продавцы** массово выгружают свой сток (через таблицу или по одной позиции), **покупатели** быстро ищут нужную модель и размер, видят все предложения с ценами и продавцами, связываются напрямую. Сделок/оплат внутри НЕТ — только сведение контактов. Продавцов вручную проверяет администратор. Цель — полностью заменить чаты реселлеров (решение расширить scope за рамки sneaker-MVP — в `docs/DECISIONS.md`).
+
+## 2. Главные приоритеты (не нарушать)
+
+1. **Быстрая массовая выгрузка стока** для продавцов (загрузка таблицей, автоподстановка моделей, отметка «продано» в один тап).
+2. **Быстрый информативный поиск** для покупателей (запрос вида «Jordan 4 42», фильтры, карточки с ценой + продавцом + контактом).
+3. **Единый справочник брендов/моделей** — чтобы поиск не разваливался из-за разнобоя в написании.
+
+## 3. Стек
+
+- Фронтенд: React + TypeScript + Vite, UI — VKUI, связь с ВК — @vkontakte/vk-bridge
+- Бэкенд: Node.js + TypeScript, Fastify
+- БД: PostgreSQL + Prisma (ORM)
+- Импорт таблиц: SheetJS
+- Хостинг (позже): фронт — Vercel, бэк+БД — Railway
+
+## 4. КАРТА ПРОЕКТА (где что лежит — обновлять при изменениях!)
+
+> ⚠️ Прежде чем искать по всему проекту — СНАЧАЛА смотри сюда. Это экономит токены.
+
+| Что | Где |
+|-----|-----|
+| Корень монорепо: npm workspaces, скрипты dev/build/db | `package.json` |
+| Пример .env для БД (Prisma) | `.env.example` |
+| Прод-образ: бэкенд раздаёт API + собранный фронт | `Dockerfile` |
+| Оркестрация: app + PostgreSQL | `docker-compose.yml` |
+| Сниппет nginx (поддомен → контейнер :8080) | `deploy/nginx-stockpoisk.conf` |
+| **Фронтенд** (Vite + React + TS) | `frontend/` |
+| — точка входа React | `frontend/src/main.tsx` |
+| — корневой компонент: вкладки «Поиск / Мой сток / Админ» | `frontend/src/App.tsx` |
+| — страница покупателя: поиск + фильтры + карточки | `frontend/src/components/SearchPage.tsx` |
+| — страница продавца: профиль + импорт + форма + мои позиции | `frontend/src/components/SellerPage.tsx` |
+| — форма профиля продавца | `frontend/src/components/ProfileForm.tsx` |
+| — админ-страница: модерация + пополнение справочника | `frontend/src/components/AdminPage.tsx` |
+| — клиент профиля (`/api/seller/me`) | `frontend/src/api/seller.ts` |
+| — клиент админки (`/api/admin/*`) | `frontend/src/api/admin.ts` |
+| — vk-bridge: init + мягкая авторизация (личность по vk_id) | `frontend/src/vk.ts` |
+| — заголовки авторизации к API (`x-vk-user-id`) | `frontend/src/api/client.ts` |
+| — массовая загрузка (xlsx-шаблон, парсинг, preview/commit) | `frontend/src/components/ImportPanel.tsx` |
+| — клиент поиска (`/api/search`) | `frontend/src/api/search.ts` |
+| — клиент импорта (SheetJS) | `frontend/src/api/import.ts` |
+| — клиент справочника (fetch `/api/brands`, `/api/models`) | `frontend/src/api/directory.ts` |
+| — клиент стока (`createListing`, `fetchMyListings`) | `frontend/src/api/listings.ts` |
+| — компонент автоподстановки (debounce, навигация клавишами) | `frontend/src/components/Autocomplete.tsx` |
+| — форма добавления позиции (размеры зависят от категории) | `frontend/src/components/ListingForm.tsx` |
+| — карточка позиции: продано / изменить / удалить | `frontend/src/components/ListingCard.tsx` |
+| — конфиг Vite (dev-прокси `/health` и `/api` → бэкенд) | `frontend/vite.config.ts` |
+| Конфиг превью-сервера (для dev-просмотра) | `.claude/launch.json` |
+| **Бэкенд** (Fastify + TS) | `backend/` |
+| — сервер: `/health`, регистрация роутов, раздача SPA (прод), закрытие БД | `backend/src/index.ts` |
+| — экземпляр Prisma Client | `backend/src/db.ts` |
+| — эндпоинты справочника: `/api/categories`, `/api/brands`, `/api/models` (поиск по названию/алиасам/артикулу) | `backend/src/routes/directory.ts` |
+| — эндпоинты стока: `POST`/`GET`/`PATCH`/`DELETE /api/listings` (пока от dev-продавца) | `backend/src/routes/listings.ts` |
+| — поиск покупателя: `GET /api/search` (парсер строки + фильтры) | `backend/src/routes/search.ts` |
+| — массовый импорт: `POST /api/import/preview`/`commit` | `backend/src/routes/import.ts` |
+| — профиль продавца: `GET`/`PATCH /api/seller/me` | `backend/src/routes/seller.ts` |
+| — админка: модерация продавцов + справочник (`/api/admin/*`) | `backend/src/routes/admin.ts` |
+| **Схема БД** (PostgreSQL): Category(дерево), Brand, Model, Listing, Seller | `prisma/schema.prisma` |
+| История миграций (init + catalog_revision) | `prisma/migrations/` |
+| Seed справочника (категории + бренды + модели, с алиасами) | `prisma/seed.ts` |
+| Анализ реального чата запросов (спрос, форматы) | `docs/research/vk_chat_analysis.md` |
+
+## 5. Правила работы Claude (ВАЖНО)
+
+- **Перед правкой** — свериться с этой картой и с `docs/STATUS.md`. Не читать весь проект без необходимости.
+- **После выполнения задачи** — ОБНОВИТЬ: карту файлов выше (если появились новые файлы), `docs/STATUS.md` (что сделано/в работе), при важном выборе — `docs/DECISIONS.md`.
+- **Не переобсуждать** уже принятые решения — они в `docs/DECISIONS.md`.
+- Менять минимально необходимое. Не рефакторить без запроса.
+- Один язык на весь проект — TypeScript.
+- Спрашивать, если задача неоднозначна, а не угадывать.
+
+## 6. Связанные документы
+
+- `docs/STATUS.md` — текущий статус, задачи, прогресс
+- `docs/DECISIONS.md` — журнал принятых решений
+- `docs/ARCHITECTURE.md` — структура данных и устройство модулей
+- `docs/DEPLOY.md` — инструкция деплоя (Vercel + Railway) + регистрация Mini App
+- `docs/TZ.md` — полное техническое задание (бизнес-требования)

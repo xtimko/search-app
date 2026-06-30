@@ -1,0 +1,33 @@
+# Изолированный «второй проект» на VPS: приложение + свой PostgreSQL.
+# Наружу торчит только 127.0.0.1:8080 — публичный доступ даёт nginx (HTTPS).
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: stockpoisk
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?нужно задать DB_PASSWORD в .env}
+      POSTGRES_DB: stockpoisk
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U stockpoisk']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://stockpoisk:${DB_PASSWORD}@db:5432/stockpoisk?schema=public
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-dev}
+      PORT: 3000
+    ports:
+      - '127.0.0.1:8080:3000'
+
+volumes:
+  pgdata:

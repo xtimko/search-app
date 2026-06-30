@@ -1,0 +1,104 @@
+// Схема БД «СтокПоиск» (PostgreSQL).
+// Мультикатегорийный агрегатор стока для реселлеров: обувь, одежда,
+// аксессуары (часы, сумки, головные уборы), украшения, люкс, коллекционное.
+// См. docs/ARCHITECTURE.md и docs/research/vk_chat_analysis.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Статус модерации продавца.
+enum SellerStatus {
+  pending
+  approved
+  blocked
+}
+
+// Состояние товара.
+enum Condition {
+  new
+  used
+}
+
+// Категория товара. Дерево (parent/children) — с запасом под расширение
+// (обувь, одежда, аксессуары → часы/сумки/украшения, люкс…). Ведёт администратор.
+model Category {
+  id       Int        @id @default(autoincrement())
+  name     String     @unique
+  slug     String     @unique
+  parentId Int?
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+  models   Model[]
+}
+
+// Бренд — единый справочник. aliases — варианты написания/сленг (nb, нб, форсы…).
+model Brand {
+  id      Int      @id @default(autoincrement())
+  name    String   @unique
+  aliases String[] @default([])
+  models  Model[]
+}
+
+// Модель/референс справочника — привязана к бренду и категории.
+// aliases — синонимы/сленг/артикулы для поиска. sku — артикул.
+model Model {
+  id         Int       @id @default(autoincrement())
+  brandId    Int
+  brand      Brand     @relation(fields: [brandId], references: [id])
+  categoryId Int
+  category   Category  @relation(fields: [categoryId], references: [id])
+  name       String
+  aliases    String[]  @default([])
+  sku        String?
+  listings   Listing[]
+
+  @@unique([brandId, name])
+  @@index([categoryId])
+}
+
+// Товар в стоке — конкретный экземпляр у продавца.
+model Listing {
+  id        Int       @id @default(autoincrement())
+  sellerId  Int
+  seller    Seller    @relation(fields: [sellerId], references: [id])
+  modelId   Int
+  model     Model     @relation(fields: [modelId], references: [id])
+  sizeUs    String? // обувь (US), напр. "9.5"
+  sizeEu    String? // обувь (EU), напр. "43"
+  size      String? // одежда/аксессуары: "M", "42mm", "one size"
+  colorway  String? // расцветка: Mocha, Onyx
+  condition Condition @default(new)
+  hasBox    Boolean   @default(true) // наличие коробки/комплекта
+  fitting   Boolean   @default(false) // «примерка» да/нет
+  price     Int // в рублях
+  city      String?
+  photo     String? // ссылка на фото
+  comment   String?
+  inStock   Boolean   @default(true) // «продано» выключает в один тап
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([modelId])
+  @@index([inStock])
+}
+
+// Продавец (реселлер). Один пользователь ВК может быть и продавцом, и покупателем.
+model Seller {
+  id          Int          @id @default(autoincrement())
+  vkId        BigInt       @unique
+  nick        String
+  contact     String // ссылка на ВК / Telegram
+  city        String?
+  experience  String? // стаж
+  description String?
+  status      SellerStatus @default(pending)
+  listings    Listing[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
