@@ -83,7 +83,11 @@ export async function searchRoutes(app: FastifyInstance) {
     }
 
     if (brandId) and.push({ model: { brandId } })
-    if (categoryId) and.push({ model: { categoryId } })
+    if (categoryId) {
+      // Выбор родительской категории включает её подкатегории (дерево из 2 уровней).
+      const children = await prisma.category.findMany({ where: { parentId: categoryId }, select: { id: true } })
+      and.push({ model: { categoryId: { in: [categoryId, ...children.map((c) => c.id)] } } })
+    }
     if (parsed.sizeUs) and.push({ sizeUs: parsed.sizeUs })
     if (parsed.sizeEu) and.push({ sizeEu: parsed.sizeEu })
     if (condition) and.push({ condition })

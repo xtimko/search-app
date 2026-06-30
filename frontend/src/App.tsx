@@ -26,7 +26,7 @@ export default function App() {
       <AdaptivityProvider>
         <AppRoot>
           <SplitLayout>
-            <SplitCol>
+            <SplitCol autoSpaced width="100%" maxWidth={1040}>
               <View activePanel="main">
                 <Panel id="main">
                   <PanelHeader>СтокПоиск</PanelHeader>
