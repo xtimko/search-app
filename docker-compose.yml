@@ -25,6 +25,8 @@ services:
     environment:
       DATABASE_URL: postgresql://stockpoisk:${DB_PASSWORD}@db:5432/stockpoisk?schema=public
       ADMIN_TOKEN: ${ADMIN_TOKEN:-dev}
+      VK_APP_ID: ${VK_APP_ID:-}
+      VK_APP_SECRET: ${VK_APP_SECRET:-}
       PORT: 3000
     ports:
       - '127.0.0.1:8080:3000'

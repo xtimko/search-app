@@ -1,15 +1,21 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { prisma } from '../db'
+import { verifyVkLaunch } from '../vkAuth'
 
-// Текущий продавец из VK-заголовков (мягкая авторизация до безопасной проверки подписи).
-// x-vk-user-id присылает фронт (vk-bridge). Нет заголовка → dev-продавец (vkId=1).
+// Текущий продавец по подписанным launch-параметрам VK (заголовок x-vk-params).
+// Подпись проверяется секретом приложения → доверенный vk_id (один аккаунт на VK-страницу).
+// Вне ВК / без валидной подписи — общий dev-продавец (vkId=1).
+function header(req: FastifyRequest, name: string): string | undefined {
+  const v = req.headers[name]
+  return Array.isArray(v) ? v[0] : v
+}
+
 function vkIdentity(req: FastifyRequest): { vkId: bigint; nick: string } {
-  const idRaw = req.headers['x-vk-user-id']
-  const idStr = Array.isArray(idRaw) ? idRaw[0] : idRaw
-  if (idStr && /^\d+$/.test(idStr)) {
-    const nameRaw = req.headers['x-vk-user-name']
-    const nameStr = Array.isArray(nameRaw) ? nameRaw[0] : nameRaw
-    return { vkId: BigInt(idStr), nick: nameStr ? decodeURIComponent(nameStr) : `Продавец ${idStr}` }
+  const params = header(req, 'x-vk-params')
+  const uid = params ? verifyVkLaunch(params) : null
+  if (uid) {
+    const name = header(req, 'x-vk-user-name')
+    return { vkId: BigInt(uid), nick: name ? decodeURIComponent(name) : `Продавец ${uid}` }
   }
   return { vkId: 1n, nick: 'dev-продавец' }
 }

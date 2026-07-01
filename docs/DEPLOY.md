@@ -30,10 +30,13 @@ cd /opt/stockpoisk
 cat > .env <<'EOF'
 DB_PASSWORD=ПРИДУМАЙ_ДЛИННЫЙ_ПАРОЛЬ
 ADMIN_TOKEN=dev
+VK_APP_ID=ID_ПРИЛОЖЕНИЯ_ВК
+VK_APP_SECRET=ЗАЩИЩЁННЫЙ_КЛЮЧ_ВК
 EOF
 ```
 - `DB_PASSWORD` — пароль контейнерного PostgreSQL (любой надёжный).
 - `ADMIN_TOKEN` — пока оставь `dev` (фронт админки шлёт `dev`; смену на секрет см. «Дальше»).
+- `VK_APP_ID` / `VK_APP_SECRET` — из **dev.vk.com** → настройки Mini App (`VK_APP_SECRET` = «Защищённый ключ»). Включают безопасную авторизацию по подписи. Без них — работает общий dev-продавец.
 
 ## 4. Запуск
 ```bash
