@@ -38,7 +38,13 @@ export function SearchPage() {
   const [data, setData] = useState<SearchResponse | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const tops = useMemo(() => categories.filter((c) => !c.parentId), [categories])
+  const tops = useMemo(() => {
+    // Обувь и Одежда — главные, вперёд; остальные по алфавиту.
+    const order: Record<string, number> = { footwear: 0, apparel: 1 }
+    return categories
+      .filter((c) => !c.parentId)
+      .sort((a, b) => (order[a.slug] ?? 9) - (order[b.slug] ?? 9) || a.name.localeCompare(b.name))
+  }, [categories])
   const childrenByParent = useMemo(() => {
     const m: Record<number, Category[]> = {}
     categories.forEach((c) => {

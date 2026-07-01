@@ -26,10 +26,11 @@ export default function App() {
       <AdaptivityProvider>
         <AppRoot>
           <SplitLayout>
-            <SplitCol autoSpaced width="100%" maxWidth={1040}>
+            <SplitCol autoSpaced>
               <View activePanel="main">
                 <Panel id="main">
                   <PanelHeader>СтокПоиск</PanelHeader>
+                  <div style={{ maxWidth: 860, margin: '0 auto', width: '100%' }}>
                   <Tabs>
                     <TabsItem selected={tab === 'search'} onClick={() => setTab('search')}>
                       Поиск
@@ -44,6 +45,7 @@ export default function App() {
                   {tab === 'search' && <SearchPage />}
                   {tab === 'seller' && <SellerPage />}
                   {tab === 'admin' && <AdminPage />}
+                  </div>
                 </Panel>
               </View>
             </SplitCol>
