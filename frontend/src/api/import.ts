@@ -7,11 +7,12 @@ export interface PreviewRow {
   row: number
   brandText: string
   modelText: string
-  sizeText: string
+  sizes: string[]
   priceText: string
   matched: { id: number; name: string; brand: string; category: string } | null
   condition: 'new' | 'used'
   price: number | null
+  count: number
   issues: string[]
   ok: boolean
 }
@@ -20,6 +21,7 @@ export interface PreviewResponse {
   rows: PreviewRow[]
   okCount: number
   errorCount: number
+  totalItems: number
 }
 
 const TEMPLATE_HEADERS = ['бренд', 'модель', 'размер', 'состояние', 'цена', 'фото', 'комментарий']
@@ -28,9 +30,9 @@ const TEMPLATE_HEADERS = ['бренд', 'модель', 'размер', 'сос�
 export function downloadTemplate() {
   const ws = XLSX.utils.aoa_to_sheet([
     TEMPLATE_HEADERS,
-    ['Nike', 'Air Force 1', '9.5us', 'новое', '12000', 'https://example.com/photo.jpg', 'без дефектов'],
-    ['New Balance', '2002R', '43', 'новое', '15000', '', ''],
-    ['Supreme', 'Box Logo Hoodie', 'M', 'б/у', '30000', '', ''],
+    ['Nike', 'Air Force 1', '8, 9, 10', 'новое', '12000', 'https://example.com/photo.jpg', 'размеры через запятую'],
+    ['New Balance', '2002R', '42, 43, 44', 'новое', '15000', '', ''],
+    ['Supreme', 'Box Logo Hoodie', 'M, L', 'б/у', '30000', '', ''],
   ])
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'сток')

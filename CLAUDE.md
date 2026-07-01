@@ -39,7 +39,7 @@ VK Mini App — **мультикатегорийный** агрегатор ст
 | — точка входа React | `frontend/src/main.tsx` |
 | — корневой компонент: вкладки «Поиск / Мой сток / Админ» | `frontend/src/App.tsx` |
 | — страница покупателя: поиск + фильтры + карточки | `frontend/src/components/SearchPage.tsx` |
-| — страница продавца: профиль + импорт + форма + мои позиции | `frontend/src/components/SellerPage.tsx` |
+| — страница продавца: профиль(сворачивается) + импорт + форма(мультиразмер) + сток (группировка + фильтр) | `frontend/src/components/SellerPage.tsx` |
 | — форма профиля продавца | `frontend/src/components/ProfileForm.tsx` |
 | — админ-страница: модерация + пополнение справочника | `frontend/src/components/AdminPage.tsx` |
 | — клиент профиля (`/api/seller/me`) | `frontend/src/api/seller.ts` |
@@ -53,7 +53,7 @@ VK Mini App — **мультикатегорийный** агрегатор ст
 | — клиент стока (`createListing`, `fetchMyListings`) | `frontend/src/api/listings.ts` |
 | — компонент автоподстановки (debounce, навигация клавишами) | `frontend/src/components/Autocomplete.tsx` |
 | — форма добавления позиции (размеры зависят от категории) | `frontend/src/components/ListingForm.tsx` |
-| — карточка позиции: продано / изменить / удалить | `frontend/src/components/ListingCard.tsx` |
+| — карточка группы стока: размеры-чипы (продано в тап), правка цены/размеров, удаление | `frontend/src/components/StockGroupCard.tsx` |
 | — конфиг Vite (dev-прокси `/health` и `/api` → бэкенд) | `frontend/vite.config.ts` |
 | Конфиг превью-сервера (для dev-просмотра) | `.claude/launch.json` |
 | **Бэкенд** (Fastify + TS) | `backend/` |

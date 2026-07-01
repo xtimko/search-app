@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Group, Header, FormItem, Input, Textarea, Button, Div, Spinner, Footnote } from '@vkontakte/vkui'
+import { Group, Header, FormItem, Input, Textarea, Button, Div, Spinner, Footnote, SimpleCell } from '@vkontakte/vkui'
 import { fetchMe, updateMe, type SellerProfile } from '../api/seller'
 
 const STATUS: Record<SellerProfile['status'], { text: string; color: string }> = {
@@ -8,35 +8,36 @@ const STATUS: Record<SellerProfile['status'], { text: string; color: string }> =
   blocked: { text: 'заблокирован', color: '#c0392b' },
 }
 
-// Профиль продавца: контакт привязывается ко всем товарам (ТЗ 4.4).
+// Профиль продавца: по умолчанию — компактная карточка, по «Изменить данные» разворачивается форма.
 export function ProfileForm() {
   const [profile, setProfile] = useState<SellerProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState(false)
   const [nick, setNick] = useState('')
   const [contact, setContact] = useState('')
   const [city, setCity] = useState('')
   const [experience, setExperience] = useState('')
   const [description, setDescription] = useState('')
   const [busy, setBusy] = useState(false)
-  const [msg, setMsg] = useState('')
   const [error, setError] = useState('')
+
+  function fill(p: SellerProfile) {
+    setProfile(p)
+    setNick(p.nick)
+    setContact(p.contact)
+    setCity(p.city ?? '')
+    setExperience(p.experience ?? '')
+    setDescription(p.description ?? '')
+  }
 
   useEffect(() => {
     fetchMe()
-      .then((p) => {
-        setProfile(p)
-        setNick(p.nick)
-        setContact(p.contact)
-        setCity(p.city ?? '')
-        setExperience(p.experience ?? '')
-        setDescription(p.description ?? '')
-      })
+      .then(fill)
       .catch(() => setError('не удалось загрузить профиль'))
       .finally(() => setLoading(false))
   }, [])
 
   async function save() {
-    setMsg('')
     setError('')
     if (!nick.trim() || !contact.trim()) {
       setError('Ник и контакт обязательны')
@@ -44,9 +45,8 @@ export function ProfileForm() {
     }
     setBusy(true)
     try {
-      const p = await updateMe({ nick, contact, city, experience, description })
-      setProfile(p)
-      setMsg('Профиль сохранён')
+      fill(await updateMe({ nick, contact, city, experience, description }))
+      setEditing(false)
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -57,20 +57,44 @@ export function ProfileForm() {
   if (loading) {
     return (
       <Group header={<Header>Профиль продавца</Header>}>
-        <Div><Spinner /></Div>
+        <Div>
+          <Spinner />
+        </Div>
       </Group>
     )
   }
 
   const st = profile ? STATUS[profile.status] : null
 
+  // Свёрнутый вид — компактная карточка только для просмотра.
+  if (!editing) {
+    return (
+      <Group header={<Header>Профиль продавца</Header>}>
+        <SimpleCell
+          disabled
+          subtitle={
+            <span>
+              {profile?.contact}
+              {profile?.city ? ` · ${profile.city}` : ''}
+              {profile?.experience ? ` · стаж: ${profile.experience}` : ''}
+            </span>
+          }
+          after={st && <span style={{ color: st.color, fontSize: 13, fontWeight: 600 }}>{st.text}</span>}
+        >
+          {profile?.nick}
+        </SimpleCell>
+        <Div>
+          <Button size="m" mode="secondary" onClick={() => setEditing(true)}>
+            Изменить данные
+          </Button>
+        </Div>
+      </Group>
+    )
+  }
+
+  // Развёрнутая форма.
   return (
     <Group header={<Header>Профиль продавца</Header>}>
-      {st && (
-        <Div>
-          Статус: <b style={{ color: st.color }}>{st.text}</b>
-        </Div>
-      )}
       <FormItem top="Ник *">
         <Input value={nick} onChange={(e) => setNick(e.target.value)} />
       </FormItem>
@@ -91,15 +115,15 @@ export function ProfileForm() {
           <Footnote style={{ color: '#c0392b' }}>{error}</Footnote>
         </FormItem>
       )}
-      {msg && (
-        <FormItem>
-          <Footnote style={{ color: '#1e8e3e' }}>{msg}</Footnote>
-        </FormItem>
-      )}
-      <Div>
-        <Button size="l" stretched loading={busy} onClick={save}>
-          Сохранить профиль
+      <Div style={{ display: 'flex', gap: 8 }}>
+        <Button size="l" loading={busy} onClick={save}>
+          Сохранить
         </Button>
+        {profile && (
+          <Button size="l" mode="secondary" onClick={() => { fill(profile); setEditing(false); setError('') }}>
+            Отмена
+          </Button>
+        )}
       </Div>
     </Group>
   )

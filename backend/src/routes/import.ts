@@ -2,17 +2,15 @@ import type { FastifyInstance } from 'fastify'
 import { prisma } from '../db'
 import { getCurrentSellerId } from './listings'
 
-// Массовый импорт стока из таблицы. Фронт парсит файл (SheetJS) и шлёт строки сюда:
-// preview — сверяем со справочником и показываем, что распозналось;
-// commit — заново сверяем и создаём листинги по валидным строкам.
+// Массовый импорт стока из таблицы. В ячейке «размер» можно указать несколько
+// размеров через запятую/пробел → на каждый создаётся отдельная позиция.
 
 type Raw = Record<string, unknown>
 
-// Допустимые заголовки колонок (нормализуем к нижнему регистру).
 const KEYS = {
   brand: ['бренд', 'brand'],
   model: ['модель', 'model'],
-  size: ['размер', 'size'],
+  size: ['размер', 'размеры', 'size', 'sizes'],
   condition: ['состояние', 'condition'],
   price: ['цена', 'price'],
   photo: ['фото', 'photo', 'ссылка'],
@@ -54,10 +52,7 @@ async function findModel(text: string, brandId?: number) {
     (await prisma.model.findFirst({ where: { ...b, name: { equals: text, mode: 'insensitive' } }, select: modelSelect })) ||
     (await prisma.model.findFirst({ where: { ...b, aliases: { has: t } }, select: modelSelect })) ||
     (await prisma.model.findFirst({
-      where: {
-        ...b,
-        OR: [{ name: { contains: text, mode: 'insensitive' } }, { sku: { contains: text, mode: 'insensitive' } }],
-      },
+      where: { ...b, OR: [{ name: { contains: text, mode: 'insensitive' } }, { sku: { contains: text, mode: 'insensitive' } }] },
       select: modelSelect,
     }))
   )
@@ -67,24 +62,9 @@ function parseCondition(text: string): 'new' | 'used' {
   return /(б\s*\/?\s*у|used|ношен)/i.test(text) ? 'used' : 'new'
 }
 
-// Размер: для обуви раскладываем в US/EU, для прочего — общий size.
-function classifySize(sizeText: string, categorySlug: string): { sizeUs?: string; sizeEu?: string; size?: string } {
-  const s = sizeText.replace(',', '.').trim()
-  if (!s) return {}
-  if (categorySlug === 'footwear') {
-    const num = s.replace(/[^\d.]/g, '')
-    if (/us|сша|юс/i.test(s)) return { sizeUs: num }
-    if (/eu|евро|ер/i.test(s)) return { sizeEu: num }
-    const v = parseFloat(num)
-    return v >= 35 && v <= 48 ? { sizeEu: num } : { sizeUs: num }
-  }
-  return { size: s }
-}
-
 interface ListingData {
   modelId: number
   sizeUs?: string
-  sizeEu?: string
   size?: string
   condition: 'new' | 'used'
   price: number
@@ -112,26 +92,37 @@ async function resolveRow(raw: Raw, index: number) {
   else if (!priceOk) issues.push('некорректная цена')
 
   const condition = parseCondition(pick(raw, KEYS.condition))
-  const ok = !!model && priceOk
-  const data: ListingData | null =
+  const sizes = sizeText.split(/[\s,;/]+/).map((s) => s.replace(',', '.').trim()).filter(Boolean)
+  const isFootwear = model?.category.slug === 'footwear'
+
+  const datas: ListingData[] =
     model && priceOk
-      ? { modelId: model.id, ...classifySize(sizeText, model.category.slug), condition, price: priceNum, photo: photo || null, comment: comment || null }
-      : null
+      ? (sizes.length ? sizes : ['']).map((s) => ({
+          modelId: model.id,
+          sizeUs: isFootwear && s ? s : undefined,
+          size: !isFootwear && s ? s : undefined,
+          condition,
+          price: priceNum,
+          photo: photo || null,
+          comment: comment || null,
+        }))
+      : []
 
   return {
     display: {
       row: index + 1,
       brandText,
       modelText,
-      sizeText,
+      sizes,
       priceText,
       matched: model ? { id: model.id, name: model.name, brand: model.brand.name, category: model.category.name } : null,
       condition,
       price: priceOk ? priceNum : null,
+      count: datas.length,
       issues,
-      ok,
+      ok: datas.length > 0,
     },
-    data,
+    datas,
   }
 }
 
@@ -145,21 +136,23 @@ export async function importRoutes(app: FastifyInstance) {
     const resolved = await Promise.all(rows.map((r, i) => resolveRow(r, i)))
     const preview = resolved.map((x) => x.display)
     const okCount = preview.filter((p) => p.ok).length
-    return { rows: preview, okCount, errorCount: preview.length - okCount }
+    const totalItems = resolved.reduce((n, x) => n + x.datas.length, 0)
+    return { rows: preview, okCount, errorCount: preview.length - okCount, totalItems }
   })
 
-  // POST /api/import/commit — создать листинги по валидным строкам.
+  // POST /api/import/commit — создать позиции по валидным строкам.
   app.post('/api/import/commit', async (req, reply) => {
     const rows = ((req.body ?? {}) as { rows?: Raw[] }).rows
     if (!Array.isArray(rows) || rows.length === 0) return reply.code(400).send({ error: 'нет строк' })
-    if (rows.length > 1000) return reply.code(400).send({ error: 'слишком много строк (макс 1000)' })
+    if (rows.length > 1000) return reply.code(400).send({ error: 'слишком много строк' })
 
     const resolved = await Promise.all(rows.map((r, i) => resolveRow(r, i)))
     const sellerId = await getCurrentSellerId(req)
-    const toCreate = resolved.filter((x) => x.data).map((x) => ({ sellerId, ...(x.data as ListingData) }))
+    const toCreate = resolved.flatMap((x) => x.datas).map((d) => ({ sellerId, ...d }))
     if (toCreate.length === 0) return reply.code(400).send({ error: 'нет валидных строк' })
 
     const res = await prisma.listing.createMany({ data: toCreate })
-    return { created: res.count, skipped: resolved.length - toCreate.length }
+    const okRows = resolved.filter((x) => x.datas.length > 0).length
+    return { created: res.count, skipped: resolved.length - okRows }
   })
 }

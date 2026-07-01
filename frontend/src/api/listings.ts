@@ -6,6 +6,7 @@ export type Condition = 'new' | 'used'
 
 export interface ListingInput {
   modelId: number
+  sizes?: string[] // несколько размеров за раз
   sizeUs?: string
   sizeEu?: string
   size?: string
@@ -55,7 +56,7 @@ export interface ListingPatch {
   comment?: string
 }
 
-export async function createListing(input: ListingInput): Promise<{ id: number }> {
+export async function createListing(input: ListingInput): Promise<unknown> {
   const res = await fetch('/api/listings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },

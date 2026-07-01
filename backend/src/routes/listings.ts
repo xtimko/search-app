@@ -31,6 +31,7 @@ export async function getCurrentSellerId(req: FastifyRequest): Promise<number> {
 
 interface CreateListingBody {
   modelId?: number
+  sizes?: string[] // несколько размеров за раз → по позиции на размер
   sizeUs?: string
   sizeEu?: string
   size?: string
@@ -92,28 +93,39 @@ export async function listingRoutes(app: FastifyInstance) {
     if (typeof b.price !== 'number' || b.price <= 0) {
       return reply.code(400).send({ error: 'price должен быть числом > 0' })
     }
-    const model = await prisma.model.findUnique({ where: { id: b.modelId } })
+    const model = await prisma.model.findUnique({
+      where: { id: b.modelId },
+      select: { id: true, category: { select: { slug: true } } },
+    })
     if (!model) {
       return reply.code(404).send({ error: 'модель не найдена' })
     }
 
     const sellerId = await getCurrentSellerId(req)
+    const isFootwear = model.category.slug === 'footwear'
+    const base = {
+      sellerId,
+      modelId: b.modelId,
+      colorway: b.colorway?.trim() || null,
+      condition: (b.condition === 'used' ? 'used' : 'new') as 'new' | 'used',
+      hasBox: b.hasBox ?? true,
+      fitting: b.fitting ?? false,
+      price: Math.round(b.price),
+      city: b.city?.trim() || null,
+      photo: b.photo?.trim() || null,
+      comment: b.comment?.trim() || null,
+    }
+
+    // Несколько размеров → по позиции на каждый (обувь → sizeUs, иначе → size).
+    const sizes = Array.isArray(b.sizes) ? b.sizes.map((s) => String(s).trim()).filter(Boolean) : []
+    if (sizes.length) {
+      const data = sizes.map((s) => ({ ...base, sizeUs: isFootwear ? s : null, sizeEu: null, size: isFootwear ? null : s }))
+      const res = await prisma.listing.createMany({ data })
+      return reply.code(201).send({ created: res.count })
+    }
+
     const listing = await prisma.listing.create({
-      data: {
-        sellerId,
-        modelId: b.modelId,
-        sizeUs: b.sizeUs?.trim() || null,
-        sizeEu: b.sizeEu?.trim() || null,
-        size: b.size?.trim() || null,
-        colorway: b.colorway?.trim() || null,
-        condition: b.condition === 'used' ? 'used' : 'new',
-        hasBox: b.hasBox ?? true,
-        fitting: b.fitting ?? false,
-        price: Math.round(b.price),
-        city: b.city?.trim() || null,
-        photo: b.photo?.trim() || null,
-        comment: b.comment?.trim() || null,
-      },
+      data: { ...base, sizeUs: b.sizeUs?.trim() || null, sizeEu: b.sizeEu?.trim() || null, size: b.size?.trim() || null },
       select: listingSelect,
     })
     return reply.code(201).send(listing)

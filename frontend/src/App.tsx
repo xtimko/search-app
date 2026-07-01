@@ -7,7 +7,6 @@ import {
   SplitCol,
   View,
   Panel,
-  PanelHeader,
   Tabs,
   TabsItem,
 } from '@vkontakte/vkui'
@@ -29,9 +28,9 @@ export default function App() {
             <SplitCol autoSpaced>
               <View activePanel="main">
                 <Panel id="main">
-                  <PanelHeader>СтокПоиск</PanelHeader>
                   <div style={{ maxWidth: 860, margin: '0 auto', width: '100%' }}>
-                  <Tabs>
+                    <div style={{ padding: '16px 16px 4px', fontSize: 22, fontWeight: 700 }}>СтокПоиск</div>
+                    <Tabs>
                     <TabsItem selected={tab === 'search'} onClick={() => setTab('search')}>
                       Поиск
                     </TabsItem>

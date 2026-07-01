@@ -4,19 +4,18 @@ import { Autocomplete } from './Autocomplete'
 import { fetchBrands, fetchModels, type Brand, type Model } from '../api/directory'
 import { createListing, type Condition } from '../api/listings'
 
-// Форма добавления позиции вручную. Размеры зависят от категории модели.
+// Форма добавления. Один товар + несколько размеров сразу → создаётся позиция на каждый размер.
 export function ListingForm({ onCreated }: { onCreated: () => void }) {
   const [brand, setBrand] = useState<Brand | null>(null)
   const [model, setModel] = useState<Model | null>(null)
-  const [sizeUs, setSizeUs] = useState('')
-  const [sizeEu, setSizeEu] = useState('')
-  const [size, setSize] = useState('')
+  const [sizes, setSizes] = useState<string[]>([])
+  const [sizeInput, setSizeInput] = useState('')
   const [colorway, setColorway] = useState('')
   const [condition, setCondition] = useState<Condition>('new')
   const [hasBox, setHasBox] = useState(true)
   const [fitting, setFitting] = useState(false)
   const [price, setPrice] = useState('')
-  const [city, setCity] = useState('')
+  const [city, setCity] = useState('Москва')
   const [photo, setPhoto] = useState('')
   const [comment, setComment] = useState('')
   const [busy, setBusy] = useState(false)
@@ -26,18 +25,25 @@ export function ListingForm({ onCreated }: { onCreated: () => void }) {
 
   const isFootwear = model?.category.slug === 'footwear'
 
+  function addSize(raw: string) {
+    const parts = raw
+      .split(/[\s,;]+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+    if (parts.length) setSizes((prev) => [...new Set([...prev, ...parts])])
+    setSizeInput('')
+  }
+
   function reset() {
     setModel(null)
     setBrand(null)
-    setSizeUs('')
-    setSizeEu('')
-    setSize('')
+    setSizes([])
+    setSizeInput('')
     setColorway('')
     setCondition('new')
     setHasBox(true)
     setFitting(false)
     setPrice('')
-    setCity('')
     setPhoto('')
     setComment('')
     setResetKey((k) => k + 1)
@@ -57,21 +63,9 @@ export function ListingForm({ onCreated }: { onCreated: () => void }) {
     }
     setBusy(true)
     try {
-      await createListing({
-        modelId: model.id,
-        sizeUs: isFootwear ? sizeUs : undefined,
-        sizeEu: isFootwear ? sizeEu : undefined,
-        size: isFootwear ? undefined : size,
-        colorway,
-        condition,
-        hasBox,
-        fitting,
-        price: priceNum,
-        city,
-        photo,
-        comment,
-      })
-      setOkMsg(`Добавлено: ${model.brand.name} ${model.name}`)
+      await createListing({ modelId: model.id, sizes, colorway, condition, hasBox, fitting, price: priceNum, city, photo, comment })
+      const n = sizes.length || 1
+      setOkMsg(`Добавлено: ${model.brand.name} ${model.name} — ${n} ${n === 1 ? 'позиция' : 'позиций'}`)
       reset()
       onCreated()
     } catch (err) {
@@ -118,20 +112,39 @@ export function ListingForm({ onCreated }: { onCreated: () => void }) {
 
       {model && (
         <>
-          {isFootwear ? (
-            <div style={{ display: 'flex' }}>
-              <FormItem top="Размер US" style={{ flex: 1 }}>
-                <Input value={sizeUs} onChange={(e) => setSizeUs(e.target.value)} placeholder="9.5" />
-              </FormItem>
-              <FormItem top="Размер EU" style={{ flex: 1 }}>
-                <Input value={sizeEu} onChange={(e) => setSizeEu(e.target.value)} placeholder="43" />
-              </FormItem>
+          <FormItem top={isFootwear ? 'Размеры (US) — можно несколько' : 'Размеры — можно несколько'} bottom="Введите размер и нажмите Enter или «+». Оставьте пусто, если размер не нужен.">
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Input
+                style={{ flex: 1 }}
+                value={sizeInput}
+                onChange={(e) => setSizeInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addSize(sizeInput)
+                  }
+                }}
+                placeholder={isFootwear ? '9, 9.5, 10…' : 'S, M, L…'}
+              />
+              <Button mode="secondary" onClick={() => addSize(sizeInput)}>
+                + добавить
+              </Button>
             </div>
-          ) : (
-            <FormItem top="Размер">
-              <Input value={size} onChange={(e) => setSize(e.target.value)} placeholder="M, 42mm, one size" />
-            </FormItem>
-          )}
+            {sizes.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                {sizes.map((s) => (
+                  <span
+                    key={s}
+                    onClick={() => setSizes((prev) => prev.filter((x) => x !== s))}
+                    style={{ padding: '4px 10px', background: '#e9edf7', borderRadius: 16, fontSize: 14, cursor: 'pointer' }}
+                    title="убрать"
+                  >
+                    {s} ✕
+                  </span>
+                ))}
+              </div>
+            )}
+          </FormItem>
 
           <FormItem top="Расцветка">
             <Input value={colorway} onChange={(e) => setColorway(e.target.value)} placeholder="Mocha, Onyx…" />
@@ -159,7 +172,7 @@ export function ListingForm({ onCreated }: { onCreated: () => void }) {
             <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="12000" />
           </FormItem>
           <FormItem top="Город">
-            <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Москва" />
+            <Input value={city} onChange={(e) => setCity(e.target.value)} />
           </FormItem>
           <FormItem top="Фото (ссылка)">
             <Input value={photo} onChange={(e) => setPhoto(e.target.value)} placeholder="https://…" />
@@ -182,7 +195,7 @@ export function ListingForm({ onCreated }: { onCreated: () => void }) {
       )}
       <Div>
         <Button size="l" stretched loading={busy} onClick={submit}>
-          Добавить в сток
+          {sizes.length > 1 ? `Добавить ${sizes.length} позиций` : 'Добавить в сток'}
         </Button>
       </Div>
     </Group>

@@ -70,8 +70,9 @@ export function ImportPanel({ onImported }: { onImported: () => void }) {
       {preview && (
         <Div>
           <div style={{ fontSize: 14, marginBottom: 8 }}>
-            Распознано: <b style={{ color: '#1e8e3e' }}>{preview.okCount}</b> · с ошибками:{' '}
-            <b style={{ color: preview.errorCount ? '#c0392b' : '#888' }}>{preview.errorCount}</b> (всего {preview.rows.length})
+            Распознано строк: <b style={{ color: '#1e8e3e' }}>{preview.okCount}</b> · с ошибками:{' '}
+            <b style={{ color: preview.errorCount ? '#c0392b' : '#888' }}>{preview.errorCount}</b> · позиций к добавлению:{' '}
+            <b>{preview.totalItems}</b>
           </div>
           <div style={{ maxHeight: 320, overflowY: 'auto', border: '1px solid #e3e3e3', borderRadius: 8 }}>
             <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 13 }}>
@@ -79,7 +80,8 @@ export function ImportPanel({ onImported }: { onImported: () => void }) {
                 <tr style={{ background: '#f6f7f9', textAlign: 'left' }}>
                   <th style={{ padding: '6px 8px' }}>#</th>
                   <th style={{ padding: '6px 8px' }}>Распознано</th>
-                  <th style={{ padding: '6px 8px' }}>Размер</th>
+                  <th style={{ padding: '6px 8px' }}>Размеры</th>
+                  <th style={{ padding: '6px 8px' }}>шт</th>
                   <th style={{ padding: '6px 8px' }}>Сост.</th>
                   <th style={{ padding: '6px 8px' }}>Цена</th>
                   <th style={{ padding: '6px 8px' }}>Проблемы</th>
@@ -100,7 +102,8 @@ export function ImportPanel({ onImported }: { onImported: () => void }) {
                         </span>
                       )}
                     </td>
-                    <td style={{ padding: '6px 8px' }}>{r.sizeText || '—'}</td>
+                    <td style={{ padding: '6px 8px' }}>{r.sizes.length ? r.sizes.join(', ') : '—'}</td>
+                    <td style={{ padding: '6px 8px', color: '#999' }}>{r.count || '—'}</td>
                     <td style={{ padding: '6px 8px' }}>{r.condition === 'new' ? 'новое' : 'б/у'}</td>
                     <td style={{ padding: '6px 8px' }}>{r.price ? `${r.price.toLocaleString('ru-RU')} ₽` : '—'}</td>
                     <td style={{ padding: '6px 8px', color: '#c0392b' }}>{r.issues.join(', ')}</td>
@@ -110,8 +113,8 @@ export function ImportPanel({ onImported }: { onImported: () => void }) {
             </table>
           </div>
           <div style={{ marginTop: 12 }}>
-            <Button size="l" stretched loading={busy} disabled={preview.okCount === 0} onClick={publish}>
-              Опубликовать {preview.okCount} позиций
+            <Button size="l" stretched loading={busy} disabled={preview.totalItems === 0} onClick={publish}>
+              Опубликовать {preview.totalItems} позиций
             </Button>
           </div>
         </Div>
