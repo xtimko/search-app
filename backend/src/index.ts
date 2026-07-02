@@ -2,7 +2,9 @@ import Fastify from 'fastify'
 import path from 'node:path'
 import { existsSync } from 'node:fs'
 import fastifyStatic from '@fastify/static'
+import fastifyCookie from '@fastify/cookie'
 import { prisma } from './db'
+import { authRoutes } from './routes/auth'
 import { directoryRoutes } from './routes/directory'
 import { listingRoutes } from './routes/listings'
 import { searchRoutes } from './routes/search'
@@ -21,6 +23,10 @@ app.get('/health', async () => {
   }
 })
 
+// Cookie (сессии VK ID).
+app.register(fastifyCookie)
+// Авторизация через VK ID.
+app.register(authRoutes)
 // Эндпоинты единого справочника брендов/моделей.
 app.register(directoryRoutes)
 // Эндпоинты стока (листинги продавца).

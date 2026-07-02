@@ -148,6 +148,7 @@ export async function importRoutes(app: FastifyInstance) {
 
     const resolved = await Promise.all(rows.map((r, i) => resolveRow(r, i)))
     const sellerId = await getCurrentSellerId(req)
+    if (!sellerId) return reply.code(401).send({ error: 'нужен вход через ВК' })
     const toCreate = resolved.flatMap((x) => x.datas).map((d) => ({ sellerId, ...d }))
     if (toCreate.length === 0) return reply.code(400).send({ error: 'нет валидных строк' })
 

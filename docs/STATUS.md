@@ -31,9 +31,15 @@ curl localhost:3000/api/brands?q=jor   # проверка автоподстан
 ## Следующие задачи (очередь)
 
 - [x] **Деплой живёт: https://search-app.ru** (RU VPS 194.67.101.182, Docker: app+Postgres, nginx + Let's Encrypt, домен reg.ru).
-- [ ] Передеплой редизайна на прод (git pull + docker compose up -d --build)
-- [ ] **Фаза 2: VK ID OAuth** — «Войти через ВК» на сайте (сессии, один аккаунт на VK-страницу; заменит launch-параметры Mini App)
+- [ ] Передеплой на прод + настроить VK ID в кабинете ВК (redirect `https://search-app.ru/api/auth/vk/callback`) + `.env`: `VK_APP_ID`/`VK_APP_SECRET`/`SESSION_SECRET`
+- [ ] **Фаза B: встроенные чаты** (Conversation/Message, поллинг, раздел «Сообщения», бейдж непрочитанных)
+- [ ] **Фаза C: сделки в чате** (офферы цена+размер, торг, резервирование, авто-списание, разделы открытые/закрытые)
+- [ ] **Фаза D: рейтинг** (скорость ответа, % завершённых сделок, отзывы)
 - [ ] **Фаза 3: доска запросов «Ищу»** — Request/Offer в БД, авто-матчинг со стоком, отклики продавцов
+
+## Сделано (VK ID OAuth — фаза A)
+
+- [x] **VK ID OAuth («Войти через ВК»).** Бэкенд: `routes/auth.ts` — `/api/auth/vk/login` (редирект на id.vk.com, PKCE S256 + state в cookie) → `/api/auth/vk/callback` (обмен кода + user_info, upsert Seller c `vkName`/`photo`, новый → pending) → сессия в httpOnly-cookie (`session.ts`, HMAC, 30 дней); `/api/auth/me`, `/api/auth/logout`. Миграция `seller_vk_profile` (vkName, photo). `getCurrentSellerId`: сессия → launch-параметры Mini App → dev-продавец (только не-production); в проде без входа приватные эндпоинты — 401. Фронт: кнопка «Войти через VK» в топбаре ↔ аватар+имя, `LoginGate` на «Мой сток»/«Профиль», профиль с VK-карточкой и «Выйти». Env: `SESSION_SECRET` (+compose, .env.example, DEPLOY §7). Проверено: юнит подписи сессии, PKCE-редирект, dev(200)/prod(401), скриншот UI. Осталось: настроить redirect URL в кабинете ВК и env на сервере.
 - [ ] **Фаза 4: профиль 2.0** — публичная страница продавца, ссылка на VK-пост с отзывами, рейтинг (формулу согласовать)
 - [ ] **Фаза 5: монетизация** — PRO-подписка + промо-слоты (когда будет аудитория)
 - [ ] Контроль сделок внутри площадки (подтверждение сделки → сток/рейтинг)

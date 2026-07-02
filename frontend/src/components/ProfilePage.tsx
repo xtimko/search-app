@@ -1,25 +1,39 @@
 import { ProfileForm } from './ProfileForm'
-import { vkProfile } from '../api/client'
+import type { AuthUser } from '../api/auth'
 
-// Раздел «Профиль»: данные продавца + задел под рейтинг и отзывы.
-export function ProfilePage() {
-  const vk = vkProfile()
+const STATUS: Record<AuthUser['status'], { text: string; cls: string }> = {
+  pending: { text: 'на модерации', cls: 'text-2' },
+  approved: { text: '✓ проверенный', cls: 'text-success' },
+  blocked: { text: 'заблокирован', cls: 'text-danger' },
+}
+
+// Раздел «Профиль»: VK-аккаунт + данные продавца + задел под рейтинг и отзывы.
+export function ProfilePage({ auth, onLogout }: { auth: AuthUser; onLogout: () => void }) {
+  const st = STATUS[auth.status]
 
   return (
     <div style={{ paddingTop: 20, maxWidth: 640 }}>
-      {vk.name && (
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-          {vk.photo ? (
-            <img src={vk.photo} alt="" style={{ width: 48, height: 48, borderRadius: '50%' }} />
-          ) : (
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--bg-elev)' }} />
-          )}
-          <div>
-            <div style={{ fontWeight: 700 }}>{vk.name}</div>
-            <div className="text-3" style={{ fontSize: 12 }}>аккаунт ВКонтакте</div>
+      <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
+        {auth.photo ? (
+          <img src={auth.photo} alt="" style={{ width: 56, height: 56, borderRadius: '50%' }} />
+        ) : (
+          <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--bg-elev)' }} />
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 800, fontSize: 16 }}>
+            {auth.vkName || auth.nick}
+            {auth.dev && <span className="text-3" style={{ fontWeight: 400 }}> (dev-режим)</span>}
+          </div>
+          <div className="text-3" style={{ fontSize: 12 }}>
+            аккаунт ВКонтакте · <span className={st.cls} style={{ fontWeight: 600 }}>{st.text}</span>
           </div>
         </div>
-      )}
+        {!auth.dev && (
+          <button className="btn btn-ghost btn-sm" onClick={onLogout}>
+            Выйти
+          </button>
+        )}
+      </div>
 
       <ProfileForm />
 

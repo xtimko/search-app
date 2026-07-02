@@ -1,27 +1,35 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { prisma } from '../db'
 import { verifyVkLaunch } from '../vkAuth'
+import { verifySession, SESSION_COOKIE } from '../session'
 
-// Текущий продавец по подписанным launch-параметрам VK (заголовок x-vk-params).
-// Подпись проверяется секретом приложения → доверенный vk_id (один аккаунт на VK-страницу).
-// Вне ВК / без валидной подписи — общий dev-продавец (vkId=1).
+// Текущий продавец: сессия VK ID (cookie) → launch-параметры Mini App (заголовок
+// x-vk-params, подпись проверяется секретом) → в dev-режиме общий dev-продавец.
+// В проде без авторизации — null (эндпоинты отвечают 401).
 function header(req: FastifyRequest, name: string): string | undefined {
   const v = req.headers[name]
   return Array.isArray(v) ? v[0] : v
 }
 
-function vkIdentity(req: FastifyRequest): { vkId: bigint; nick: string } {
+function vkIdentity(req: FastifyRequest): { vkId: bigint; nick: string } | null {
+  const sessionVkId = verifySession(req.cookies?.[SESSION_COOKIE])
+  if (sessionVkId) return { vkId: sessionVkId, nick: `Продавец ${sessionVkId}` }
+
   const params = header(req, 'x-vk-params')
   const uid = params ? verifyVkLaunch(params) : null
   if (uid) {
     const name = header(req, 'x-vk-user-name')
     return { vkId: BigInt(uid), nick: name ? decodeURIComponent(name) : `Продавец ${uid}` }
   }
-  return { vkId: 1n, nick: 'dev-продавец' }
+
+  if (process.env.NODE_ENV !== 'production') return { vkId: 1n, nick: 'dev-продавец' }
+  return null
 }
 
-export async function getCurrentSellerId(req: FastifyRequest): Promise<number> {
-  const { vkId, nick } = vkIdentity(req)
+export async function getCurrentSellerId(req: FastifyRequest): Promise<number | null> {
+  const identity = vkIdentity(req)
+  if (!identity) return null
+  const { vkId, nick } = identity
   const seller = await prisma.seller.upsert({
     where: { vkId },
     update: {},
@@ -108,6 +116,7 @@ export async function listingRoutes(app: FastifyInstance) {
     }
 
     const sellerId = await getCurrentSellerId(req)
+    if (!sellerId) return reply.code(401).send({ error: 'нужен вход через ВК' })
     const isFootwear = model.category.slug === 'footwear'
     const base = {
       sellerId,
@@ -138,8 +147,9 @@ export async function listingRoutes(app: FastifyInstance) {
   })
 
   // GET /api/listings — мои позиции (текущего продавца), новые сверху.
-  app.get('/api/listings', async (req) => {
+  app.get('/api/listings', async (req, reply) => {
     const sellerId = await getCurrentSellerId(req)
+    if (!sellerId) return reply.code(401).send({ error: 'нужен вход через ВК' })
     return prisma.listing.findMany({
       where: { sellerId },
       orderBy: { createdAt: 'desc' },
@@ -153,6 +163,7 @@ export async function listingRoutes(app: FastifyInstance) {
     if (!Number.isInteger(id)) return reply.code(400).send({ error: 'некорректный id' })
 
     const sellerId = await getCurrentSellerId(req)
+    if (!sellerId) return reply.code(401).send({ error: 'нужен вход через ВК' })
     const existing = await prisma.listing.findUnique({ where: { id } })
     if (!existing || existing.sellerId !== sellerId) {
       return reply.code(404).send({ error: 'позиция не найдена' })
@@ -202,6 +213,7 @@ export async function listingRoutes(app: FastifyInstance) {
     if (!Number.isInteger(id)) return reply.code(400).send({ error: 'некорректный id' })
 
     const sellerId = await getCurrentSellerId(req)
+    if (!sellerId) return reply.code(401).send({ error: 'нужен вход через ВК' })
     const existing = await prisma.listing.findUnique({ where: { id } })
     if (!existing || existing.sellerId !== sellerId) {
       return reply.code(404).send({ error: 'позиция не найдена' })

@@ -23,8 +23,9 @@ const sellerSelect = {
 
 export async function sellerRoutes(app: FastifyInstance) {
   // GET /api/seller/me — мой профиль.
-  app.get('/api/seller/me', async (req) => {
+  app.get('/api/seller/me', async (req, reply) => {
     const id = await getCurrentSellerId(req)
+    if (!id) return reply.code(401).send({ error: 'нужен вход через ВК' })
     return prisma.seller.findUnique({ where: { id }, select: sellerSelect })
   })
 
@@ -46,6 +47,7 @@ export async function sellerRoutes(app: FastifyInstance) {
     if (b.description !== undefined) data.description = b.description.trim()
 
     const id = await getCurrentSellerId(req)
+    if (!id) return reply.code(401).send({ error: 'нужен вход через ВК' })
     return prisma.seller.update({ where: { id }, data, select: sellerSelect })
   })
 }

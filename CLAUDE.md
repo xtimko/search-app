@@ -49,7 +49,9 @@
 | — админ-страница: модерация + пополнение справочника | `frontend/src/components/AdminPage.tsx` |
 | — клиент профиля (`/api/seller/me`) | `frontend/src/api/seller.ts` |
 | — клиент админки (`/api/admin/*`) | `frontend/src/api/admin.ts` |
-| — vk-bridge: init + мягкая авторизация (личность по vk_id) | `frontend/src/vk.ts` |
+| — клиент авторизации VK ID (`/api/auth/*`) | `frontend/src/api/auth.ts` |
+| — гейт «Войти через VK» для приватных разделов | `frontend/src/components/LoginGate.tsx` |
+| — vk-bridge: init + мягкая авторизация (личность по vk_id, Mini App-контекст) | `frontend/src/vk.ts` |
 | — заголовки авторизации к API (`x-vk-user-id`) | `frontend/src/api/client.ts` |
 | — массовая загрузка (xlsx-шаблон, парсинг, preview/commit) | `frontend/src/components/ImportPanel.tsx` |
 | — клиент поиска (`/api/search`) | `frontend/src/api/search.ts` |
@@ -63,6 +65,8 @@
 | Конфиг превью-сервера (для dev-просмотра) | `.claude/launch.json` |
 | **Бэкенд** (Fastify + TS) | `backend/` |
 | — сервер: `/health`, регистрация роутов, раздача SPA (прод), закрытие БД | `backend/src/index.ts` |
+| — VK ID OAuth: login/callback/me/logout | `backend/src/routes/auth.ts` |
+| — подписанные сессии (httpOnly-cookie, HMAC) | `backend/src/session.ts` |
 | — экземпляр Prisma Client | `backend/src/db.ts` |
 | — эндпоинты справочника: `/api/categories`, `/api/brands`, `/api/models` (поиск по названию/алиасам/артикулу) | `backend/src/routes/directory.ts` |
 | — эндпоинты стока: `POST`/`GET`/`PATCH`/`DELETE /api/listings` (пока от dev-продавца) | `backend/src/routes/listings.ts` |

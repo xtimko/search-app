@@ -93,6 +93,8 @@ model Seller {
   id          Int          @id @default(autoincrement())
   vkId        BigInt       @unique
   nick        String
+  vkName      String? // имя+фамилия из VK ID
+  photo       String? // аватар из VK ID
   contact     String // ссылка на ВК / Telegram
   city        String?
   experience  String? // стаж
