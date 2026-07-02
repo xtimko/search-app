@@ -42,7 +42,8 @@
 | — главная: hero-поиск, категории, горячие предложения, тизер запросов | `frontend/src/components/HomePage.tsx` |
 | — карточка товара в выдаче (поиск + главная) | `frontend/src/components/ResultCard.tsx` |
 | — страница покупателя: поиск + фильтры + карточки | `frontend/src/components/SearchPage.tsx` |
-| — страница продавца: разделы Сток / Добавить / Импорт | `frontend/src/components/SellerPage.tsx` |
+| — страница продавца: разделы Сток / Добавить / Импорт, вид таблица/карточки | `frontend/src/components/SellerPage.tsx` |
+| — компактная таблица стока (инлайн: цена, размеры, продано) | `frontend/src/components/StockTable.tsx` |
 | — раздел «Профиль»: VK-карточка + профиль продавца + задел рейтинга | `frontend/src/components/ProfilePage.tsx` |
 | — форма профиля продавца (карточка ↔ форма) | `frontend/src/components/ProfileForm.tsx` |
 | — админ-страница: модерация + пополнение справочника | `frontend/src/components/AdminPage.tsx` |

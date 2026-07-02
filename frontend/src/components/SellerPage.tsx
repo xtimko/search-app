@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { ListingForm } from './ListingForm'
 import { ImportPanel } from './ImportPanel'
 import { StockGroupCard, type StockGroup } from './StockGroupCard'
+import { StockTable } from './StockTable'
 import { fetchMyListings, type MyListing } from '../api/listings'
 
 type Section = 'stock' | 'add' | 'import'
+type View = 'table' | 'cards'
 
 function sizeLabel(l: MyListing): string {
   if (l.sizeUs || l.sizeEu) {
@@ -13,11 +15,12 @@ function sizeLabel(l: MyListing): string {
   return l.size || '—'
 }
 
-// Мой сток: внутренние разделы «Сток / Добавить / Импорт» — без простыни.
+// Мой сток: разделы «Сток / Добавить / Импорт»; сток — таблица (для больших стоков) или карточки.
 export function SellerPage() {
   const [items, setItems] = useState<MyListing[]>([])
   const [filter, setFilter] = useState('')
   const [section, setSection] = useState<Section>('stock')
+  const [view, setView] = useState<View>(() => (localStorage.getItem('stock-view') as View) || 'table')
 
   function reload() {
     fetchMyListings().then(setItems).catch(() => setItems([]))
@@ -26,6 +29,11 @@ export function SellerPage() {
   useEffect(() => {
     reload()
   }, [])
+
+  function switchView(v: View) {
+    setView(v)
+    localStorage.setItem('stock-view', v)
+  }
 
   const groups = useMemo(() => {
     const map = new Map<string, StockGroup>()
@@ -103,18 +111,32 @@ export function SellerPage() {
             )}
             {items.length > 0 && (
               <>
-                <input
-                  className="input"
-                  style={{ marginBottom: 10 }}
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                  placeholder="фильтр по названию…"
-                />
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 10 }}>
-                  {shown.map((g) => (
-                    <StockGroupCard key={g.key} group={g} onChanged={reload} />
-                  ))}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'center' }}>
+                  <input
+                    className="input"
+                    style={{ flex: 1 }}
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                    placeholder="фильтр по названию…"
+                  />
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button className={view === 'table' ? 'chip chip-active' : 'chip'} onClick={() => switchView('table')} title="компактная таблица">
+                      ☰ Таблица
+                    </button>
+                    <button className={view === 'cards' ? 'chip chip-active' : 'chip'} onClick={() => switchView('cards')} title="крупные карточки">
+                      ▦ Карточки
+                    </button>
+                  </div>
                 </div>
+                {view === 'table' ? (
+                  <StockTable groups={shown} onChanged={reload} />
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 10 }}>
+                    {shown.map((g) => (
+                      <StockGroupCard key={g.key} group={g} onChanged={reload} />
+                    ))}
+                  </div>
+                )}
                 {shown.length === 0 && <p className="text-3">ничего не найдено по фильтру</p>}
               </>
             )}
