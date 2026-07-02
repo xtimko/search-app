@@ -87,17 +87,17 @@ export function StockTable({ groups, onChanged }: { groups: StockGroup[]; onChan
                     {g.items.map((it) => (
                       <span
                         key={it.id}
-                        onClick={() => !busy && act(() => updateListing(it.id, { inStock: !it.inStock }))}
-                        title={it.inStock ? 'в наличии — клик: продано' : 'продано — клик: вернуть'}
+                        onClick={() => !busy && !it.reserved && act(() => updateListing(it.id, { inStock: !it.inStock }))}
+                        title={it.reserved ? 'в открытой сделке (резерв)' : it.inStock ? 'в наличии — клик: продано' : 'продано — клик: вернуть'}
                         style={{
                           padding: '2px 8px',
                           borderRadius: 10,
                           fontSize: 12,
-                          cursor: 'pointer',
+                          cursor: it.reserved ? 'default' : 'pointer',
                           userSelect: 'none',
                           background: it.inStock ? 'var(--bg-elev)' : 'transparent',
-                          border: `1px solid ${it.inStock ? 'var(--border-strong)' : 'var(--border)'}`,
-                          color: it.inStock ? 'var(--text)' : 'var(--text-3)',
+                          border: `1px solid ${it.reserved ? 'var(--warn)' : it.inStock ? 'var(--border-strong)' : 'var(--border)'}`,
+                          color: it.reserved ? 'var(--warn)' : it.inStock ? 'var(--text)' : 'var(--text-3)',
                           textDecoration: it.inStock ? 'none' : 'line-through',
                         }}
                       >

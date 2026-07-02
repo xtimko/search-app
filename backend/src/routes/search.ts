@@ -61,6 +61,7 @@ export async function searchRoutes(app: FastifyInstance) {
 
     const and: Prisma.ListingWhereInput[] = [
       { inStock: true },
+      { reserved: false }, // позиции в открытой сделке скрыты
       { seller: { status: 'approved' } },
     ]
 

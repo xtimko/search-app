@@ -6,6 +6,7 @@ import fastifyCookie from '@fastify/cookie'
 import { prisma } from './db'
 import { authRoutes } from './routes/auth'
 import { chatRoutes } from './routes/chats'
+import { dealRoutes } from './routes/deals'
 import { directoryRoutes } from './routes/directory'
 import { listingRoutes } from './routes/listings'
 import { searchRoutes } from './routes/search'
@@ -30,6 +31,8 @@ app.register(fastifyCookie)
 app.register(authRoutes)
 // Встроенные чаты.
 app.register(chatRoutes)
+// Сделки (офферы в чате, подтверждение, резерв).
+app.register(dealRoutes)
 // Эндпоинты единого справочника брендов/моделей.
 app.register(directoryRoutes)
 // Эндпоинты стока (листинги продавца).

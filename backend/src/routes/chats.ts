@@ -17,12 +17,14 @@ const convInclude = (me: number) =>
         size: true,
         colorway: true,
         inStock: true,
+        reserved: true,
         model: { select: { name: true, brand: { select: { name: true } } } },
       },
     },
     buyer: { select: peerSelect },
     seller: { select: peerSelect },
     messages: { orderBy: { createdAt: 'desc' as const }, take: 1, select: { text: true, senderId: true, createdAt: true } },
+    deals: { where: { status: 'open' as const }, take: 1 },
     _count: { select: { messages: { where: { readAt: null, NOT: { senderId: me } } } } },
   }) as const
 
@@ -98,7 +100,7 @@ export async function chatRoutes(app: FastifyInstance) {
       where: { conversationId: id },
       orderBy: { createdAt: 'asc' },
       take: 300,
-      select: { id: true, senderId: true, text: true, createdAt: true, readAt: true },
+      select: { id: true, senderId: true, text: true, kind: true, offerPrice: true, offerStatus: true, createdAt: true, readAt: true },
     })
   })
 
@@ -117,7 +119,7 @@ export async function chatRoutes(app: FastifyInstance) {
     const [msg] = await prisma.$transaction([
       prisma.message.create({
         data: { conversationId: id, senderId: me, text },
-        select: { id: true, senderId: true, text: true, createdAt: true, readAt: true },
+        select: { id: true, senderId: true, text: true, kind: true, offerPrice: true, offerStatus: true, createdAt: true, readAt: true },
       }),
       prisma.conversation.update({ where: { id }, data: { updatedAt: new Date() } }),
     ])

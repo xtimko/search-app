@@ -13,7 +13,7 @@ export interface StockGroup {
   price: number
   city: string | null
   fitting: boolean
-  items: { id: number; size: string; inStock: boolean }[]
+  items: { id: number; size: string; inStock: boolean; reserved: boolean }[]
 }
 
 // Карточка группы: один товар, размеры — чипы (тап = продано/в наличии).
@@ -91,8 +91,9 @@ export function StockGroupCard({ group, onChanged }: { group: StockGroup; onChan
           <span
             key={it.id}
             className={it.inStock ? 'size-chip' : 'size-chip size-chip-sold'}
-            onClick={() => !busy && act(() => updateListing(it.id, { inStock: !it.inStock }))}
-            title={it.inStock ? 'в наличии — нажми, чтобы «продано»' : 'продано — нажми, чтобы вернуть'}
+            style={it.reserved ? { borderColor: 'var(--warn)', color: 'var(--warn)', cursor: 'default' } : undefined}
+            onClick={() => !busy && !it.reserved && act(() => updateListing(it.id, { inStock: !it.inStock }))}
+            title={it.reserved ? 'в открытой сделке (резерв)' : it.inStock ? 'в наличии — нажми, чтобы «продано»' : 'продано — нажми, чтобы вернуть'}
           >
             {it.size}
             {editing && (

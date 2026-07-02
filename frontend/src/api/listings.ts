@@ -32,6 +32,7 @@ export interface MyListing {
   price: number
   city: string | null
   inStock: boolean
+  reserved: boolean
   createdAt: string
   model: {
     id: number

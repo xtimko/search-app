@@ -81,12 +81,60 @@ model Listing {
   photo     String? // ссылка на фото
   comment   String?
   inStock   Boolean   @default(true) // «продано» выключает в один тап
+  reserved  Boolean   @default(false) // в открытой сделке (скрыто из поиска)
   conversations Conversation[]
+  deals     Deal[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
   @@index([modelId])
   @@index([inStock])
+}
+
+// Статус сделки.
+enum DealStatus {
+  open
+  completed
+  cancelled
+}
+
+// Тип сообщения: текст, оффер (предложение цены), системное.
+enum MessageKind {
+  text
+  offer
+  system
+}
+
+// Статус оффера.
+enum OfferStatus {
+  active
+  accepted
+  declined
+  superseded
+}
+
+// Сделка: принятый оффер по конкретной позиции. Открыта → позиция в резерве;
+// оба подтвердили → completed + «продано»; отмена → резерв снят.
+model Deal {
+  id              Int          @id @default(autoincrement())
+  conversationId  Int
+  conversation    Conversation @relation(fields: [conversationId], references: [id])
+  listingId       Int
+  listing         Listing      @relation(fields: [listingId], references: [id])
+  buyerId         Int
+  buyer           Seller       @relation("buyerDeals", fields: [buyerId], references: [id])
+  sellerId        Int
+  seller          Seller       @relation("sellerDeals", fields: [sellerId], references: [id])
+  price           Int // зафиксированная цена
+  status          DealStatus   @default(open)
+  buyerConfirmed  Boolean      @default(false)
+  sellerConfirmed Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  closedAt        DateTime?
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([listingId, status])
 }
 
 // Диалог покупателя с продавцом по конкретному товару.
@@ -99,6 +147,7 @@ model Conversation {
   sellerId  Int // владелец товара
   seller    Seller    @relation("sellerConversations", fields: [sellerId], references: [id])
   messages  Message[]
+  deals     Deal[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt // время последнего сообщения (для сортировки)
 
@@ -115,6 +164,9 @@ model Message {
   senderId       Int
   sender         Seller       @relation(fields: [senderId], references: [id])
   text           String
+  kind           MessageKind  @default(text)
+  offerPrice     Int? // для kind=offer
+  offerStatus    OfferStatus? // для kind=offer
   createdAt      DateTime     @default(now())
   readAt         DateTime?
 
@@ -136,6 +188,8 @@ model Seller {
   listings    Listing[]
   buyerConversations  Conversation[] @relation("buyerConversations")
   sellerConversations Conversation[] @relation("sellerConversations")
+  buyerDeals  Deal[] @relation("buyerDeals")
+  sellerDeals Deal[] @relation("sellerDeals")
   messages    Message[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt

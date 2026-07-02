@@ -57,7 +57,7 @@ export function SellerPage() {
         }
         map.set(key, g)
       }
-      g.items.push({ id: l.id, size: sizeLabel(l), inStock: l.inStock })
+      g.items.push({ id: l.id, size: sizeLabel(l), inStock: l.inStock, reserved: l.reserved })
     }
     return [...map.values()]
   }, [items])

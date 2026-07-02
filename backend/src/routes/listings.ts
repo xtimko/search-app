@@ -86,6 +86,7 @@ const listingSelect = {
   price: true,
   city: true,
   inStock: true,
+  reserved: true,
   createdAt: true,
   model: {
     select: {
@@ -168,6 +169,7 @@ export async function listingRoutes(app: FastifyInstance) {
     if (!existing || existing.sellerId !== sellerId) {
       return reply.code(404).send({ error: 'позиция не найдена' })
     }
+    if (existing.reserved) return reply.code(400).send({ error: 'позиция в открытой сделке — сначала заверши или отмени её' })
 
     const b = (req.body ?? {}) as UpdateListingBody
     const data: {
@@ -218,6 +220,7 @@ export async function listingRoutes(app: FastifyInstance) {
     if (!existing || existing.sellerId !== sellerId) {
       return reply.code(404).send({ error: 'позиция не найдена' })
     }
+    if (existing.reserved) return reply.code(400).send({ error: 'позиция в открытой сделке — сначала заверши или отмени её' })
     await prisma.listing.delete({ where: { id } })
     return reply.code(204).send()
   })

@@ -16,7 +16,24 @@ export interface ChatListing {
   size: string | null
   colorway: string | null
   inStock: boolean
+  reserved: boolean
   model: { name: string; brand: { name: string } }
+}
+
+export type OfferStatus = 'active' | 'accepted' | 'declined' | 'superseded'
+
+export interface Deal {
+  id: number
+  conversationId: number
+  listingId: number
+  buyerId: number
+  sellerId: number
+  price: number
+  status: 'open' | 'completed' | 'cancelled'
+  buyerConfirmed: boolean
+  sellerConfirmed: boolean
+  createdAt: string
+  closedAt: string | null
 }
 
 export interface Conversation {
@@ -28,6 +45,7 @@ export interface Conversation {
   buyer: ChatPeer
   seller: ChatPeer
   messages: { text: string; senderId: number; createdAt: string }[]
+  deals: Deal[] // открытая сделка (0 или 1)
   _count: { messages: number } // непрочитанные для меня
   updatedAt: string
 }
@@ -36,6 +54,9 @@ export interface ChatMessage {
   id: number
   senderId: number
   text: string
+  kind: 'text' | 'offer' | 'system'
+  offerPrice: number | null
+  offerStatus: OfferStatus | null
   createdAt: string
   readAt: string | null
 }
@@ -75,4 +96,45 @@ export function sendMessage(chatId: number, text: string): Promise<ChatMessage> 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
   })
+}
+
+export function sendOffer(chatId: number, price: number): Promise<ChatMessage> {
+  return req<ChatMessage>(`/api/chats/${chatId}/offer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ price }),
+  })
+}
+
+export function acceptOffer(chatId: number, messageId: number): Promise<Deal> {
+  return req<Deal>(`/api/chats/${chatId}/offers/${messageId}/accept`, { method: 'POST' })
+}
+
+export function declineOffer(chatId: number, messageId: number): Promise<{ ok: boolean }> {
+  return req<{ ok: boolean }>(`/api/chats/${chatId}/offers/${messageId}/decline`, { method: 'POST' })
+}
+
+export interface DealFull extends Deal {
+  listing: {
+    id: number
+    sizeUs: string | null
+    sizeEu: string | null
+    size: string | null
+    colorway: string | null
+    model: { name: string; brand: { name: string } }
+  }
+  buyer: ChatPeer
+  seller: ChatPeer
+}
+
+export function fetchDeals(): Promise<DealFull[]> {
+  return req<DealFull[]>('/api/deals')
+}
+
+export function confirmDeal(id: number): Promise<DealFull> {
+  return req<DealFull>(`/api/deals/${id}/confirm`, { method: 'POST' })
+}
+
+export function cancelDeal(id: number): Promise<DealFull> {
+  return req<DealFull>(`/api/deals/${id}/cancel`, { method: 'POST' })
 }
