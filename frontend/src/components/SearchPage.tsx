@@ -9,11 +9,12 @@ const CATEGORY_ORDER: Record<string, number> = { footwear: 0, apparel: 1 }
 interface Props {
   initialQ?: string
   initialCategorySlug?: string
+  onContact?: (r: import('../api/search').SearchResult) => void
 }
 
 // Поиск покупателя: строка, категории-кнопки (подкатегории по клику),
 // расширенный фильтр (свёрнут), сортировка в шапке результатов.
-export function SearchPage({ initialQ, initialCategorySlug }: Props) {
+export function SearchPage({ initialQ, initialCategorySlug, onContact }: Props) {
   const [q, setQ] = useState(initialQ ?? '')
   const [categories, setCategories] = useState<Category[]>([])
   const [category, setCategory] = useState(0)
@@ -203,7 +204,7 @@ export function SearchPage({ initialQ, initialCategorySlug }: Props) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 10 }}>
         {results.map((r) => (
-          <ResultCard key={r.id} r={r} />
+          <ResultCard key={r.id} r={r} onContact={onContact} />
         ))}
       </div>
     </div>

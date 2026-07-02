@@ -6,7 +6,13 @@ import { ResultCard } from './ResultCard'
 const CATEGORY_ORDER: Record<string, number> = { footwear: 0, apparel: 1 }
 
 // Главная: hero-поиск, категории, горячие предложения, тизер запросов «Ищу».
-export function HomePage({ onSearch }: { onSearch: (q?: string, categorySlug?: string) => void }) {
+export function HomePage({
+  onSearch,
+  onContact,
+}: {
+  onSearch: (q?: string, categorySlug?: string) => void
+  onContact?: (r: SearchResult) => void
+}) {
   const [q, setQ] = useState('')
   const [categories, setCategories] = useState<Category[]>([])
   const [hot, setHot] = useState<SearchResult[]>([])
@@ -68,7 +74,7 @@ export function HomePage({ onSearch }: { onSearch: (q?: string, categorySlug?: s
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 10 }}>
             {hot.map((r) => (
-              <ResultCard key={r.id} r={r} compact />
+              <ResultCard key={r.id} r={r} compact onContact={onContact} />
             ))}
           </div>
         )}

@@ -81,11 +81,44 @@ model Listing {
   photo     String? // ссылка на фото
   comment   String?
   inStock   Boolean   @default(true) // «продано» выключает в один тап
+  conversations Conversation[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
   @@index([modelId])
   @@index([inStock])
+}
+
+// Диалог покупателя с продавцом по конкретному товару.
+model Conversation {
+  id        Int       @id @default(autoincrement())
+  listingId Int
+  listing   Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyerId   Int // кто написал первым
+  buyer     Seller    @relation("buyerConversations", fields: [buyerId], references: [id])
+  sellerId  Int // владелец товара
+  seller    Seller    @relation("sellerConversations", fields: [sellerId], references: [id])
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt // время последнего сообщения (для сортировки)
+
+  @@unique([listingId, buyerId])
+  @@index([buyerId])
+  @@index([sellerId])
+}
+
+// Сообщение в диалоге. readAt — когда прочитано получателем.
+model Message {
+  id             Int          @id @default(autoincrement())
+  conversationId Int
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       Int
+  sender         Seller       @relation(fields: [senderId], references: [id])
+  text           String
+  createdAt      DateTime     @default(now())
+  readAt         DateTime?
+
+  @@index([conversationId, createdAt])
 }
 
 // Продавец (реселлер). Один пользователь ВК может быть и продавцом, и покупателем.
@@ -101,6 +134,9 @@ model Seller {
   description String?
   status      SellerStatus @default(pending)
   listings    Listing[]
+  buyerConversations  Conversation[] @relation("buyerConversations")
+  sellerConversations Conversation[] @relation("sellerConversations")
+  messages    Message[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 }

@@ -4,26 +4,32 @@ import { SearchPage } from './components/SearchPage'
 import { SellerPage } from './components/SellerPage'
 import { ProfilePage } from './components/ProfilePage'
 import { AdminPage } from './components/AdminPage'
+import { ChatsPage } from './components/ChatsPage'
 import { LoginGate } from './components/LoginGate'
 import { fetchAuthMe, logout, loginUrl, type AuthUser } from './api/auth'
+import { openChat, fetchUnread } from './api/chats'
+import type { SearchResult } from './api/search'
 
-export type Tab = 'home' | 'search' | 'requests' | 'seller' | 'profile' | 'admin'
+export type Tab = 'home' | 'search' | 'chats' | 'requests' | 'seller' | 'profile' | 'admin'
 
 const NAV: { id: Tab; label: string; soon?: boolean }[] = [
   { id: 'home', label: 'Главная' },
   { id: 'search', label: 'Поиск' },
+  { id: 'chats', label: 'Чаты' },
   { id: 'requests', label: 'Запросы', soon: true },
   { id: 'seller', label: 'Мой сток' },
   { id: 'profile', label: 'Профиль' },
   { id: 'admin', label: 'Админ' },
 ]
 
-// Оболочка Search-app: топбар с навигацией и входом через VK ID, контент по центру.
+// Оболочка Search-app: топбар с навигацией, входом через VK ID и бейджем чатов.
 export default function App() {
   const [tab, setTab] = useState<Tab>('home')
   const [searchInit, setSearchInit] = useState<{ q?: string; categorySlug?: string; seed: number }>({ seed: 0 })
+  const [chatInit, setChatInit] = useState<{ chatId?: number; seed: number }>({ seed: 0 })
   const [auth, setAuth] = useState<AuthUser | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
+  const [unread, setUnread] = useState(0)
 
   useEffect(() => {
     fetchAuthMe()
@@ -31,14 +37,43 @@ export default function App() {
       .finally(() => setAuthChecked(true))
   }, [])
 
+  // Бейдж непрочитанных: поллинг, пока пользователь авторизован.
+  useEffect(() => {
+    if (!auth) return
+    let stop = false
+    const tick = () => fetchUnread().then((r) => !stop && setUnread(r.count)).catch(() => {})
+    tick()
+    const t = setInterval(tick, 15000)
+    return () => {
+      stop = true
+      clearInterval(t)
+    }
+  }, [auth, tab])
+
   function goSearch(q?: string, categorySlug?: string) {
     setSearchInit((s) => ({ q, categorySlug, seed: s.seed + 1 }))
     setTab('search')
   }
 
+  // «Написать продавцу»: авторизован → внутренний чат; нет — внешний контакт.
+  async function contactSeller(r: SearchResult) {
+    if (!auth) {
+      window.open(r.seller.contact, '_blank')
+      return
+    }
+    try {
+      const conv = await openChat(r.id)
+      setChatInit((s) => ({ chatId: conv.id, seed: s.seed + 1 }))
+      setTab('chats')
+    } catch (e) {
+      alert((e as Error).message)
+    }
+  }
+
   async function onLogout() {
     await logout()
     setAuth(null)
+    setUnread(0)
     setTab('home')
   }
 
@@ -63,6 +98,11 @@ export default function App() {
               >
                 {n.label}
                 {n.soon && <span className="badge" style={{ fontSize: 10 }}>скоро</span>}
+                {n.id === 'chats' && unread > 0 && (
+                  <span style={{ background: 'var(--accent)', color: 'var(--on-accent)', fontSize: 11, fontWeight: 700, borderRadius: 10, padding: '0 6px' }}>
+                    {unread}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
@@ -94,8 +134,12 @@ export default function App() {
       </header>
 
       <main style={{ maxWidth: 1080, margin: '0 auto', padding: '0 16px 48px', width: '100%', flex: 1 }}>
-        {tab === 'home' && <HomePage onSearch={goSearch} />}
-        {tab === 'search' && <SearchPage key={searchInit.seed} initialQ={searchInit.q} initialCategorySlug={searchInit.categorySlug} />}
+        {tab === 'home' && <HomePage onSearch={goSearch} onContact={contactSeller} />}
+        {tab === 'search' && (
+          <SearchPage key={searchInit.seed} initialQ={searchInit.q} initialCategorySlug={searchInit.categorySlug} onContact={contactSeller} />
+        )}
+        {tab === 'chats' &&
+          (authed ? <ChatsPage key={chatInit.seed} meId={auth.id} initialChatId={chatInit.chatId} /> : <LoginGate what="Раздел «Чаты»" />)}
         {tab === 'seller' && (authed ? <SellerPage /> : <LoginGate what="Раздел «Мой сток»" />)}
         {tab === 'profile' && (authed ? <ProfilePage auth={auth} onLogout={onLogout} /> : <LoginGate what="Раздел «Профиль»" />)}
         {tab === 'admin' && <AdminPage />}

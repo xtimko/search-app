@@ -7,8 +7,9 @@ function sizeLabel(r: SearchResult): string {
   return r.size || '—'
 }
 
-// Карточка товара в выдаче (поиск, главная).
-export function ResultCard({ r, compact }: { r: SearchResult; compact?: boolean }) {
+// Карточка товара в выдаче (поиск, главная). onContact — открыть внутренний чат;
+// без него — внешний контакт продавца.
+export function ResultCard({ r, compact, onContact }: { r: SearchResult; compact?: boolean; onContact?: (r: SearchResult) => void }) {
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', gap: 12 }}>
@@ -40,7 +41,10 @@ export function ResultCard({ r, compact }: { r: SearchResult; compact?: boolean 
           )}
         </div>
       </div>
-      <button className="btn btn-accent-outline btn-sm btn-block" onClick={() => window.open(r.seller.contact, '_blank')}>
+      <button
+        className="btn btn-accent-outline btn-sm btn-block"
+        onClick={() => (onContact ? onContact(r) : window.open(r.seller.contact, '_blank'))}
+      >
         Написать продавцу
       </button>
     </div>

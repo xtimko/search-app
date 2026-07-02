@@ -5,6 +5,7 @@ import fastifyStatic from '@fastify/static'
 import fastifyCookie from '@fastify/cookie'
 import { prisma } from './db'
 import { authRoutes } from './routes/auth'
+import { chatRoutes } from './routes/chats'
 import { directoryRoutes } from './routes/directory'
 import { listingRoutes } from './routes/listings'
 import { searchRoutes } from './routes/search'
@@ -27,6 +28,8 @@ app.get('/health', async () => {
 app.register(fastifyCookie)
 // Авторизация через VK ID.
 app.register(authRoutes)
+// Встроенные чаты.
+app.register(chatRoutes)
 // Эндпоинты единого справочника брендов/моделей.
 app.register(directoryRoutes)
 // Эндпоинты стока (листинги продавца).
