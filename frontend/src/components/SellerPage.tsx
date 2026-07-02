@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Group, Header, Div, Search } from '@vkontakte/vkui'
 import { ListingForm } from './ListingForm'
 import { ImportPanel } from './ImportPanel'
-import { ProfileForm } from './ProfileForm'
 import { StockGroupCard, type StockGroup } from './StockGroupCard'
 import { fetchMyListings, type MyListing } from '../api/listings'
+
+type Section = 'stock' | 'add' | 'import'
 
 function sizeLabel(l: MyListing): string {
   if (l.sizeUs || l.sizeEu) {
@@ -13,10 +13,11 @@ function sizeLabel(l: MyListing): string {
   return l.size || '—'
 }
 
-// Сторона продавца: профиль + массовая загрузка + ручное добавление + управление стоком (сгруппировано).
+// Мой сток: внутренние разделы «Сток / Добавить / Импорт» — без простыни.
 export function SellerPage() {
   const [items, setItems] = useState<MyListing[]>([])
   const [filter, setFilter] = useState('')
+  const [section, setSection] = useState<Section>('stock')
 
   function reload() {
     fetchMyListings().then(setItems).catch(() => setItems([]))
@@ -26,7 +27,6 @@ export function SellerPage() {
     reload()
   }, [])
 
-  // Группировка: одинаковый товар (модель+расцветка+состояние+цена) — одна карточка, размеры внутри.
   const groups = useMemo(() => {
     const map = new Map<string, StockGroup>()
     for (const l of items) {
@@ -63,33 +63,66 @@ export function SellerPage() {
   const inStock = items.filter((i) => i.inStock).length
 
   return (
-    <>
-      <ProfileForm />
-      <ImportPanel onImported={reload} />
-      <ListingForm onCreated={reload} />
+    <div style={{ paddingTop: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Мой сток</h1>
+          {items.length > 0 && (
+            <div className="text-3" style={{ fontSize: 13, marginTop: 2 }}>
+              {groups.length} товаров · {items.length} позиций · в наличии {inStock}
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button className={section === 'stock' ? 'chip chip-active' : 'chip'} onClick={() => setSection('stock')}>
+            Сток
+          </button>
+          <button className={section === 'add' ? 'chip chip-active' : 'chip'} onClick={() => setSection('add')}>
+            + Добавить
+          </button>
+          <button className={section === 'import' ? 'chip chip-active' : 'chip'} onClick={() => setSection('import')}>
+            Импорт из таблицы
+          </button>
+        </div>
+      </div>
 
-      <Group
-        header={
-          <Header
-            subtitle={items.length ? `${groups.length} товаров · ${items.length} позиций · в наличии ${inStock}` : undefined}
-          >
-            Мои позиции
-          </Header>
-        }
-      >
-        {items.length === 0 && <Div style={{ color: '#888' }}>пока пусто — добавьте позицию выше</Div>}
-
-        {items.length > 0 && (
-          <Search value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="фильтр по названию" />
+      <div style={{ marginTop: 16 }}>
+        {section === 'stock' && (
+          <>
+            {items.length === 0 && (
+              <div className="card" style={{ textAlign: 'center', padding: 32 }}>
+                <div style={{ fontWeight: 700 }}>Пока пусто</div>
+                <div className="text-2" style={{ fontSize: 13, margin: '6px 0 14px' }}>
+                  Добавь первую позицию вручную или загрузи сразу всё таблицей
+                </div>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                  <button className="btn btn-primary btn-sm" onClick={() => setSection('add')}>+ Добавить</button>
+                  <button className="btn btn-outline btn-sm" onClick={() => setSection('import')}>Импорт из таблицы</button>
+                </div>
+              </div>
+            )}
+            {items.length > 0 && (
+              <>
+                <input
+                  className="input"
+                  style={{ marginBottom: 10 }}
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  placeholder="фильтр по названию…"
+                />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 10 }}>
+                  {shown.map((g) => (
+                    <StockGroupCard key={g.key} group={g} onChanged={reload} />
+                  ))}
+                </div>
+                {shown.length === 0 && <p className="text-3">ничего не найдено по фильтру</p>}
+              </>
+            )}
+          </>
         )}
-
-        <Div>
-          {shown.map((g) => (
-            <StockGroupCard key={g.key} group={g} onChanged={reload} />
-          ))}
-          {items.length > 0 && shown.length === 0 && <div style={{ color: '#888' }}>ничего не найдено по фильтру</div>}
-        </Div>
-      </Group>
-    </>
+        {section === 'add' && <ListingForm onCreated={() => { reload(); setSection('stock') }} />}
+        {section === 'import' && <ImportPanel onImported={() => { reload(); setSection('stock') }} />}
+      </div>
+    </div>
   )
 }

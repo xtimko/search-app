@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Group, Header, FormItem, Input, Textarea, Button, Div, Spinner, Footnote, SimpleCell } from '@vkontakte/vkui'
 import { fetchMe, updateMe, type SellerProfile } from '../api/seller'
 
-const STATUS: Record<SellerProfile['status'], { text: string; color: string }> = {
-  pending: { text: 'на модерации', color: '#b8860b' },
-  approved: { text: '✓ проверенный', color: '#1e8e3e' },
-  blocked: { text: 'заблокирован', color: '#c0392b' },
+const STATUS: Record<SellerProfile['status'], { text: string; cls: string }> = {
+  pending: { text: 'на модерации', cls: 'text-2' },
+  approved: { text: '✓ проверенный', cls: 'text-success' },
+  blocked: { text: 'заблокирован', cls: 'text-danger' },
 }
 
-// Профиль продавца: по умолчанию — компактная карточка, по «Изменить данные» разворачивается форма.
+// Профиль продавца: компактная карточка, по «Изменить данные» — форма.
 export function ProfileForm() {
   const [profile, setProfile] = useState<SellerProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -54,77 +53,56 @@ export function ProfileForm() {
     }
   }
 
-  if (loading) {
-    return (
-      <Group header={<Header>Профиль продавца</Header>}>
-        <Div>
-          <Spinner />
-        </Div>
-      </Group>
-    )
-  }
+  if (loading) return <div className="card text-3">загружаем профиль…</div>
 
   const st = profile ? STATUS[profile.status] : null
 
-  // Свёрнутый вид — компактная карточка только для просмотра.
   if (!editing) {
     return (
-      <Group header={<Header>Профиль продавца</Header>}>
-        <SimpleCell
-          disabled
-          subtitle={
-            <span>
+      <div className="card">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>{profile?.nick}</div>
+            <div className="text-2" style={{ fontSize: 13, marginTop: 2 }}>
               {profile?.contact}
               {profile?.city ? ` · ${profile.city}` : ''}
               {profile?.experience ? ` · стаж: ${profile.experience}` : ''}
-            </span>
-          }
-          after={st && <span style={{ color: st.color, fontSize: 13, fontWeight: 600 }}>{st.text}</span>}
-        >
-          {profile?.nick}
-        </SimpleCell>
-        <Div>
-          <Button size="m" mode="secondary" onClick={() => setEditing(true)}>
-            Изменить данные
-          </Button>
-        </Div>
-      </Group>
+            </div>
+            {profile?.description && <div className="text-3" style={{ fontSize: 13, marginTop: 4 }}>{profile.description}</div>}
+          </div>
+          {st && <span className={st.cls} style={{ fontSize: 13, fontWeight: 600 }}>{st.text}</span>}
+        </div>
+        <button className="btn btn-outline btn-sm" style={{ marginTop: 12 }} onClick={() => setEditing(true)}>
+          Изменить данные
+        </button>
+        {error && <div className="text-danger" style={{ fontSize: 13, marginTop: 8 }}>{error}</div>}
+      </div>
     )
   }
 
-  // Развёрнутая форма.
   return (
-    <Group header={<Header>Профиль продавца</Header>}>
-      <FormItem top="Ник *">
-        <Input value={nick} onChange={(e) => setNick(e.target.value)} />
-      </FormItem>
-      <FormItem top="Контакт (ссылка ВК / Telegram) *">
-        <Input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="https://vk.com/... или https://t.me/..." />
-      </FormItem>
-      <FormItem top="Город">
-        <Input value={city} onChange={(e) => setCity(e.target.value)} />
-      </FormItem>
-      <FormItem top="Стаж">
-        <Input value={experience} onChange={(e) => setExperience(e.target.value)} placeholder="например: 3 года" />
-      </FormItem>
-      <FormItem top="Описание">
-        <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
-      </FormItem>
-      {error && (
-        <FormItem>
-          <Footnote style={{ color: '#c0392b' }}>{error}</Footnote>
-        </FormItem>
-      )}
-      <Div style={{ display: 'flex', gap: 8 }}>
-        <Button size="l" loading={busy} onClick={save}>
-          Сохранить
-        </Button>
+    <div className="card">
+      <span className="label" style={{ marginTop: 0 }}>Ник *</span>
+      <input className="input" value={nick} onChange={(e) => setNick(e.target.value)} />
+      <span className="label">Контакт (ссылка ВК / Telegram) *</span>
+      <input className="input" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="https://vk.com/... или https://t.me/..." />
+      <span className="label">Город</span>
+      <input className="input" value={city} onChange={(e) => setCity(e.target.value)} />
+      <span className="label">Стаж</span>
+      <input className="input" value={experience} onChange={(e) => setExperience(e.target.value)} placeholder="например: 3 года" />
+      <span className="label">Описание</span>
+      <textarea className="textarea" value={description} onChange={(e) => setDescription(e.target.value)} />
+      {error && <div className="text-danger" style={{ fontSize: 13, marginTop: 10 }}>{error}</div>}
+      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+        <button className="btn btn-primary" disabled={busy} onClick={save}>
+          {busy ? 'Сохраняю…' : 'Сохранить'}
+        </button>
         {profile && (
-          <Button size="l" mode="secondary" onClick={() => { fill(profile); setEditing(false); setError('') }}>
+          <button className="btn btn-outline" onClick={() => { fill(profile); setEditing(false); setError('') }}>
             Отмена
-          </Button>
+          </button>
         )}
-      </Div>
-    </Group>
+      </div>
+    </div>
   )
 }

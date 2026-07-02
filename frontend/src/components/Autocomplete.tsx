@@ -1,20 +1,16 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 interface AutocompleteProps<T> {
-  // Функция загрузки подсказок по строке запроса.
   fetcher: (query: string) => Promise<T[]>
-  // Что вызвать при выборе элемента.
   onSelect: (item: T) => void
   getKey: (item: T) => string | number
   getLabel: (item: T) => string
-  // Опциональный кастомный рендер строки подсказки.
   renderItem?: (item: T) => ReactNode
   placeholder?: string
   minChars?: number
 }
 
-// Переиспользуемое поле автоподстановки: debounce, навигация клавишами,
-// закрытие по клику вне, состояния загрузки/пустого результата.
+// Поле автоподстановки: debounce, навигация клавишами, закрытие по клику вне.
 export function Autocomplete<T>({
   fetcher,
   onSelect,
@@ -30,7 +26,6 @@ export function Autocomplete<T>({
   const [active, setActive] = useState(-1)
   const [loading, setLoading] = useState(false)
 
-  // Держим свежие колбэки в ref, чтобы эффект зависел только от query.
   const fetcherRef = useRef(fetcher)
   fetcherRef.current = fetcher
   const boxRef = useRef<HTMLDivElement>(null)
@@ -63,7 +58,6 @@ export function Autocomplete<T>({
     }
   }, [query, minChars])
 
-  // Закрытие по клику вне компонента.
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false)
@@ -96,44 +90,36 @@ export function Autocomplete<T>({
   }
 
   return (
-    <div ref={boxRef} style={{ position: 'relative', width: 360, maxWidth: '100%' }}>
+    <div ref={boxRef} style={{ position: 'relative', width: '100%' }}>
       <input
+        className="input"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => items.length > 0 && setOpen(true)}
         onKeyDown={onKeyDown}
         placeholder={placeholder}
-        style={{
-          width: '100%',
-          boxSizing: 'border-box',
-          padding: '8px 10px',
-          fontSize: 15,
-          border: '1px solid #ccc',
-          borderRadius: 8,
-        }}
       />
       {open && (
         <ul
           style={{
             position: 'absolute',
-            zIndex: 10,
+            zIndex: 30,
             top: '100%',
             left: 0,
             right: 0,
             margin: '4px 0 0',
-            padding: 0,
+            padding: 4,
             listStyle: 'none',
-            background: '#fff',
-            border: '1px solid #ddd',
-            borderRadius: 8,
-            boxShadow: '0 6px 20px rgba(0,0,0,0.08)',
+            background: 'var(--bg-elev)',
+            border: '1px solid var(--border-strong)',
+            borderRadius: 10,
             maxHeight: 280,
             overflowY: 'auto',
           }}
         >
-          {loading && <li style={{ padding: '8px 10px', color: '#888' }}>загрузка…</li>}
+          {loading && <li style={{ padding: '8px 10px', color: 'var(--text-3)', fontSize: 13 }}>загрузка…</li>}
           {!loading && items.length === 0 && (
-            <li style={{ padding: '8px 10px', color: '#888' }}>ничего не найдено</li>
+            <li style={{ padding: '8px 10px', color: 'var(--text-3)', fontSize: 13 }}>ничего не найдено</li>
           )}
           {!loading &&
             items.map((item, i) => (
@@ -146,8 +132,10 @@ export function Autocomplete<T>({
                 onMouseEnter={() => setActive(i)}
                 style={{
                   padding: '8px 10px',
+                  fontSize: 14,
                   cursor: 'pointer',
-                  background: i === active ? '#f0f4ff' : 'transparent',
+                  borderRadius: 6,
+                  background: i === active ? 'rgba(163,230,53,0.12)' : 'transparent',
                 }}
               >
                 {renderItem ? renderItem(item) : getLabel(item)}

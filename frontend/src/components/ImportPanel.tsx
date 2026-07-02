@@ -1,8 +1,7 @@
 import { useRef, useState } from 'react'
-import { Group, Header, Div, Button, Footnote } from '@vkontakte/vkui'
 import { downloadTemplate, parseFile, previewImport, commitImport, type PreviewResponse } from '../api/import'
 
-// Панель массовой загрузки стока из таблицы: шаблон → файл → предпросмотр → публикация.
+// Массовая загрузка из таблицы: шаблон → файл → предпросмотр → публикация.
 export function ImportPanel({ onImported }: { onImported: () => void }) {
   const [raw, setRaw] = useState<Record<string, unknown>[]>([])
   const [preview, setPreview] = useState<PreviewResponse | null>(null)
@@ -40,7 +39,7 @@ export function ImportPanel({ onImported }: { onImported: () => void }) {
     setMsg('')
     try {
       const res = await commitImport(raw)
-      setMsg(`Добавлено позиций: ${res.created}${res.skipped ? `, пропущено: ${res.skipped}` : ''}`)
+      setMsg(`Добавлено позиций: ${res.created}${res.skipped ? `, пропущено строк: ${res.skipped}` : ''}`)
       setPreview(null)
       setRaw([])
       if (fileRef.current) fileRef.current.value = ''
@@ -53,31 +52,30 @@ export function ImportPanel({ onImported }: { onImported: () => void }) {
   }
 
   return (
-    <Group header={<Header>Массовая загрузка из таблицы</Header>}>
-      <Div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-        <Button mode="secondary" onClick={downloadTemplate}>
+    <div className="card">
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <button className="btn btn-outline" onClick={downloadTemplate}>
           Скачать шаблон (.xlsx)
-        </Button>
-        <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={onFile} disabled={busy} style={{ fontSize: 14 }} />
-      </Div>
-      <Div>
-        <Footnote>Колонки: бренд, модель, размер, состояние, цена, фото, комментарий.</Footnote>
-      </Div>
+        </button>
+        <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={onFile} disabled={busy} style={{ fontSize: 13, color: 'var(--text-2)' }} />
+      </div>
+      <div className="hint">
+        Колонки: бренд, модель, размер, состояние, цена, фото, комментарий. В «размер» можно несколько через запятую: <b>8, 9, 10</b> — создастся позиция на каждый.
+      </div>
 
-      {error && <Div><Footnote style={{ color: '#c0392b' }}>{error}</Footnote></Div>}
-      {msg && <Div><Footnote style={{ color: '#1e8e3e' }}>{msg}</Footnote></Div>}
+      {error && <div className="text-danger" style={{ fontSize: 13, marginTop: 10 }}>{error}</div>}
+      {msg && <div className="text-success" style={{ fontSize: 13, marginTop: 10 }}>{msg}</div>}
 
       {preview && (
-        <Div>
+        <div style={{ marginTop: 14 }}>
           <div style={{ fontSize: 14, marginBottom: 8 }}>
-            Распознано строк: <b style={{ color: '#1e8e3e' }}>{preview.okCount}</b> · с ошибками:{' '}
-            <b style={{ color: preview.errorCount ? '#c0392b' : '#888' }}>{preview.errorCount}</b> · позиций к добавлению:{' '}
-            <b>{preview.totalItems}</b>
+            Распознано строк: <b className="text-success">{preview.okCount}</b> · с ошибками:{' '}
+            <b className={preview.errorCount ? 'text-danger' : 'text-3'}>{preview.errorCount}</b> · позиций к добавлению: <b>{preview.totalItems}</b>
           </div>
-          <div style={{ maxHeight: 320, overflowY: 'auto', border: '1px solid #e3e3e3', borderRadius: 8 }}>
+          <div style={{ maxHeight: 320, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
             <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 13 }}>
               <thead>
-                <tr style={{ background: '#f6f7f9', textAlign: 'left' }}>
+                <tr style={{ background: 'var(--bg-elev)', textAlign: 'left' }}>
                   <th style={{ padding: '6px 8px' }}>#</th>
                   <th style={{ padding: '6px 8px' }}>Распознано</th>
                   <th style={{ padding: '6px 8px' }}>Размеры</th>
@@ -89,36 +87,34 @@ export function ImportPanel({ onImported }: { onImported: () => void }) {
               </thead>
               <tbody>
                 {preview.rows.map((r) => (
-                  <tr key={r.row} style={{ borderTop: '1px solid #eee', background: r.ok ? 'transparent' : '#fdecea' }}>
-                    <td style={{ padding: '6px 8px', color: '#999' }}>{r.row}</td>
+                  <tr key={r.row} style={{ borderTop: '1px solid var(--border)', background: r.ok ? 'transparent' : 'rgba(255,107,94,0.07)' }}>
+                    <td style={{ padding: '6px 8px', color: 'var(--text-3)' }}>{r.row}</td>
                     <td style={{ padding: '6px 8px' }}>
                       {r.matched ? (
                         <span>
-                          {r.matched.brand} {r.matched.name} <span style={{ color: '#999' }}>· {r.matched.category}</span>
+                          {r.matched.brand} {r.matched.name} <span className="text-3">· {r.matched.category}</span>
                         </span>
                       ) : (
-                        <span style={{ color: '#c0392b' }}>
-                          {r.brandText} {r.modelText} ❌
+                        <span className="text-danger">
+                          {r.brandText} {r.modelText} ✕
                         </span>
                       )}
                     </td>
                     <td style={{ padding: '6px 8px' }}>{r.sizes.length ? r.sizes.join(', ') : '—'}</td>
-                    <td style={{ padding: '6px 8px', color: '#999' }}>{r.count || '—'}</td>
+                    <td style={{ padding: '6px 8px', color: 'var(--text-3)' }}>{r.count || '—'}</td>
                     <td style={{ padding: '6px 8px' }}>{r.condition === 'new' ? 'новое' : 'б/у'}</td>
                     <td style={{ padding: '6px 8px' }}>{r.price ? `${r.price.toLocaleString('ru-RU')} ₽` : '—'}</td>
-                    <td style={{ padding: '6px 8px', color: '#c0392b' }}>{r.issues.join(', ')}</td>
+                    <td style={{ padding: '6px 8px' }} className="text-danger">{r.issues.join(', ')}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <div style={{ marginTop: 12 }}>
-            <Button size="l" stretched loading={busy} disabled={preview.totalItems === 0} onClick={publish}>
-              Опубликовать {preview.totalItems} позиций
-            </Button>
-          </div>
-        </Div>
+          <button className="btn btn-primary btn-lg btn-block" style={{ marginTop: 12 }} disabled={busy || preview.totalItems === 0} onClick={publish}>
+            {busy ? 'Публикую…' : `Опубликовать ${preview.totalItems} позиций`}
+          </button>
+        </div>
       )}
-    </Group>
+    </div>
   )
 }

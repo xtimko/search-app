@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Group, Header, Div, FormItem, Input, NativeSelect, Button, Card, Footnote } from '@vkontakte/vkui'
 import { Autocomplete } from './Autocomplete'
 import { fetchCategories, fetchBrands, type Brand, type Category } from '../api/directory'
 import { fetchSellers, setSellerStatus, addBrand, addModel, type AdminSeller } from '../api/admin'
 
-const STATUS: Record<AdminSeller['status'], { text: string; color: string }> = {
-  pending: { text: 'на модерации', color: '#b8860b' },
-  approved: { text: 'проверенный', color: '#1e8e3e' },
-  blocked: { text: 'заблокирован', color: '#c0392b' },
+const STATUS: Record<AdminSeller['status'], { text: string; cls: string }> = {
+  pending: { text: 'на модерации', cls: 'text-2' },
+  approved: { text: 'проверенный', cls: 'text-success' },
+  blocked: { text: 'заблокирован', cls: 'text-danger' },
 }
 
 export function AdminPage() {
@@ -73,60 +72,71 @@ export function AdminPage() {
   }
 
   return (
-    <>
-      <Group header={<Header>{`Продавцы (${sellers.length})`}</Header>}>
-        {error && <Div><Footnote style={{ color: '#c0392b' }}>{error}</Footnote></Div>}
-        <Div>
-          {sellers.map((s) => {
-            const st = STATUS[s.status]
-            return (
-              <Card key={s.id} mode="outline" style={{ marginBottom: 8 }}>
-                <Div>
-                  <div style={{ fontWeight: 600 }}>
-                    {s.nick} <span style={{ fontWeight: 400, color: '#999' }}>· vk {s.vkId} · позиций: {s._count.listings}</span>
-                  </div>
-                  <div style={{ fontSize: 14, color: '#555', marginBottom: 8 }}>
-                    {s.contact}
-                    {s.city && ` · ${s.city}`} · <b style={{ color: st.color }}>{st.text}</b>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <Button size="s" mode="secondary" disabled={s.status === 'approved'} onClick={() => changeStatus(s.id, 'approved')}>
-                      Одобрить
-                    </Button>
-                    <Button size="s" mode="secondary" appearance="negative" disabled={s.status === 'blocked'} onClick={() => changeStatus(s.id, 'blocked')}>
-                      Заблокировать
-                    </Button>
-                    {s.status !== 'pending' && (
-                      <Button size="s" mode="tertiary" onClick={() => changeStatus(s.id, 'pending')}>
-                        В ожидание
-                      </Button>
-                    )}
-                  </div>
-                </Div>
-              </Card>
-            )
-          })}
-        </Div>
-      </Group>
+    <div style={{ paddingTop: 20 }}>
+      <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Админ</h1>
+      {error && <div className="text-danger" style={{ fontSize: 13, marginTop: 8 }}>{error}</div>}
 
-      <Group header={<Header>Справочник</Header>}>
-        {dirMsg && <Div><Footnote style={{ color: dirMsg.includes('добавлен') ? '#1e8e3e' : '#c0392b' }}>{dirMsg}</Footnote></Div>}
+      <div className="section-title">Продавцы ({sellers.length})</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 10 }}>
+        {sellers.map((s) => {
+          const st = STATUS[s.status]
+          return (
+            <div key={s.id} className="card">
+              <div style={{ fontWeight: 700 }}>
+                {s.nick} <span className="text-3" style={{ fontWeight: 400 }}>· vk {s.vkId} · позиций: {s._count.listings}</span>
+              </div>
+              <div className="text-2" style={{ fontSize: 13, margin: '2px 0 10px' }}>
+                {s.contact}
+                {s.city && ` · ${s.city}`} · <span className={st.cls} style={{ fontWeight: 600 }}>{st.text}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button className="btn btn-outline btn-sm" disabled={s.status === 'approved'} onClick={() => changeStatus(s.id, 'approved')}>
+                  Одобрить
+                </button>
+                <button className="btn btn-danger btn-sm" disabled={s.status === 'blocked'} onClick={() => changeStatus(s.id, 'blocked')}>
+                  Заблокировать
+                </button>
+                {s.status !== 'pending' && (
+                  <button className="btn btn-ghost btn-sm" onClick={() => changeStatus(s.id, 'pending')}>
+                    В ожидание
+                  </button>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
 
-        <FormItem top="Новый бренд — название">
-          <Input value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="напр. Off-White" />
-        </FormItem>
-        <FormItem top="Алиасы через запятую">
-          <Input value={brandAliases} onChange={(e) => setBrandAliases(e.target.value)} placeholder="офвайт, ow" />
-        </FormItem>
-        <Div>
-          <Button stretched onClick={submitBrand}>Добавить бренд</Button>
-        </Div>
-
-        <FormItem top="Новая модель — бренд">
-          <Autocomplete<Brand> key={`b-${resetKey}`} placeholder="бренд модели" fetcher={fetchBrands} getKey={(b) => b.id} getLabel={(b) => b.name} onSelect={(b) => setMBrand(b)} />
-        </FormItem>
-        <FormItem top="Категория">
-          <NativeSelect value={mCategory} onChange={(e) => setMCategory(Number(e.target.value))}>
+      <div className="section-title">Справочник</div>
+      {dirMsg && (
+        <div className={dirMsg.includes('добавлен') ? 'text-success' : 'text-danger'} style={{ fontSize: 13, marginBottom: 8 }}>
+          {dirMsg}
+        </div>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 10, maxWidth: 720 }}>
+        <div className="card">
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>Добавить бренд</div>
+          <span className="label">Название</span>
+          <input className="input" value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="напр. Off-White" />
+          <span className="label">Алиасы через запятую</span>
+          <input className="input" value={brandAliases} onChange={(e) => setBrandAliases(e.target.value)} placeholder="офвайт, ow" />
+          <button className="btn btn-primary btn-block" style={{ marginTop: 14 }} onClick={submitBrand}>
+            Добавить бренд
+          </button>
+        </div>
+        <div className="card">
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>Добавить модель</div>
+          <span className="label">Бренд</span>
+          <Autocomplete<Brand>
+            key={`b-${resetKey}`}
+            placeholder="бренд модели"
+            fetcher={fetchBrands}
+            getKey={(b) => b.id}
+            getLabel={(b) => b.name}
+            onSelect={(b) => setMBrand(b)}
+          />
+          <span className="label">Категория</span>
+          <select className="select" value={mCategory} onChange={(e) => setMCategory(Number(e.target.value))}>
             <option value={0}>категория…</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
@@ -134,21 +144,18 @@ export function AdminPage() {
                 {c.name}
               </option>
             ))}
-          </NativeSelect>
-        </FormItem>
-        <FormItem top="Название модели">
-          <Input value={mName} onChange={(e) => setMName(e.target.value)} />
-        </FormItem>
-        <FormItem top="Алиасы через запятую">
-          <Input value={mAliases} onChange={(e) => setMAliases(e.target.value)} />
-        </FormItem>
-        <FormItem top="Артикул (опц.)">
-          <Input value={mSku} onChange={(e) => setMSku(e.target.value)} />
-        </FormItem>
-        <Div>
-          <Button stretched onClick={submitModel}>Добавить модель</Button>
-        </Div>
-      </Group>
-    </>
+          </select>
+          <span className="label">Название модели</span>
+          <input className="input" value={mName} onChange={(e) => setMName(e.target.value)} />
+          <span className="label">Алиасы через запятую</span>
+          <input className="input" value={mAliases} onChange={(e) => setMAliases(e.target.value)} />
+          <span className="label">Артикул (опц.)</span>
+          <input className="input" value={mSku} onChange={(e) => setMSku(e.target.value)} />
+          <button className="btn btn-primary btn-block" style={{ marginTop: 14 }} onClick={submitModel}>
+            Добавить модель
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }

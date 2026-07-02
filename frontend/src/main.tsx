@@ -1,11 +1,11 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import '@vkontakte/vkui/dist/vkui.css'
+import './styles/theme.css'
 import App from './App'
 import { initVk } from './vk'
 
-// Пробуем получить личность из vk-bridge, но НЕ блокируем рендер дольше таймаута:
-// внутри ВК промис резолвится быстро, в обычном браузере send «висит» — рендерим по таймауту.
+// Пробуем получить личность из vk-bridge (внутри ВК), но не блокируем рендер
+// дольше таймаута: в обычном браузере bridge.send «висит» — рендерим по таймауту.
 function render() {
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
