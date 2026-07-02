@@ -54,8 +54,7 @@ export async function authRoutes(app: FastifyInstance) {
       redirect_uri: redirectUri,
       state,
       code_challenge: challenge,
-      code_challenge_method: 'S256',
-      scope: 'vkid.personal_info',
+      code_challenge_method: 's256',
     })
     return reply.redirect(`${VKID_AUTH}?${params.toString()}`)
   })
