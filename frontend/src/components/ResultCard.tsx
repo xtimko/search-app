@@ -16,8 +16,8 @@ export function ResultCard({ r, compact, onContact }: { r: SearchResult; compact
         {r.photo ? (
           <img src={r.photo} alt="" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
         ) : (
-          <div style={{ width: 64, height: 64, borderRadius: 8, background: 'var(--bg-elev)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontSize: 22 }}>
-            ✦
+          <div style={{ width: 64, height: 64, borderRadius: 8, background: 'var(--bg-elev)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontSize: 20, fontWeight: 700 }}>
+            {r.model.brand.name.slice(0, 1)}
           </div>
         )}
         <div style={{ flex: 1, minWidth: 0 }}>

@@ -6,7 +6,7 @@ import { ProfilePage } from './components/ProfilePage'
 import { AdminPage } from './components/AdminPage'
 import { ChatsPage } from './components/ChatsPage'
 import { LoginGate } from './components/LoginGate'
-import { fetchAuthMe, logout, loginUrl, type AuthUser } from './api/auth'
+import { fetchAuthMe, logout, type AuthUser } from './api/auth'
 import { openChat, fetchUnread } from './api/chats'
 import type { SearchResult } from './api/search'
 
@@ -108,9 +108,9 @@ export default function App() {
           </nav>
           <div style={{ flexShrink: 0 }}>
             {authChecked && !authed && (
-              <a className="btn btn-vk btn-sm" href={loginUrl()}>
-                Войти через VK
-              </a>
+              <button className="btn btn-vk btn-sm" onClick={() => setTab('profile')}>
+                Войти
+              </button>
             )}
             {authed && (
               <div

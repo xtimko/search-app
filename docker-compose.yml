@@ -28,6 +28,7 @@ services:
       VK_APP_ID: ${VK_APP_ID:-}
       VK_APP_SECRET: ${VK_APP_SECRET:-}
       SESSION_SECRET: ${SESSION_SECRET:?нужно задать SESSION_SECRET в .env}
+      ALLOW_TEST_LOGIN: ${ALLOW_TEST_LOGIN:-}
       NODE_ENV: production
       PORT: 3000
     ports:

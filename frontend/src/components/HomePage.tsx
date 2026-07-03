@@ -66,8 +66,8 @@ export function HomePage({
 
       <section>
         <div className="section-title">
-          <span style={{ color: 'var(--accent)' }}>🔥</span> Горячие предложения
-          <span className="badge">скоро — промо</span>
+          Горячие предложения
+          <span className="badge">промо скоро</span>
         </div>
         {hot.length === 0 ? (
           <p className="text-3">пока пусто — сток наполняется</p>

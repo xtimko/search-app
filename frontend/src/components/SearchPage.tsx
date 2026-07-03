@@ -131,7 +131,7 @@ export function SearchPage({ initialQ, initialCategorySlug, onContact }: Props) 
 
       <div style={{ marginTop: 10 }}>
         <button className="btn btn-ghost btn-sm" onClick={() => setShowAdvanced((v) => !v)}>
-          {showAdvanced ? '▲ Скрыть фильтры' : '▼ Расширенный фильтр'}
+          {showAdvanced ? 'Скрыть фильтры' : 'Все фильтры'}
         </button>
       </div>
 

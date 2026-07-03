@@ -349,7 +349,7 @@ export function ChatsPage({ meId, initialChatId }: { meId: number; initialChatId
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {!isDesktop && (
             <button className="btn btn-ghost btn-sm" onClick={() => setActiveId(null)}>
-              ←
+              Назад
             </button>
           )}
           <Avatar p={peerOf(active, meId)} size={32} />

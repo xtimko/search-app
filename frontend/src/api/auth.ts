@@ -27,3 +27,16 @@ export async function logout(): Promise<void> {
 export function loginUrl(): string {
   return '/api/auth/vk/login'
 }
+
+// Временный тестовый вход по имени (пока VK ID не подключён).
+export async function testLogin(name: string): Promise<void> {
+  const res = await fetch('/api/auth/test-login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error || `HTTP ${res.status}`)
+  }
+}

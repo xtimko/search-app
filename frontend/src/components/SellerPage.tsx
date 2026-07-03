@@ -121,10 +121,10 @@ export function SellerPage() {
                   />
                   <div style={{ display: 'flex', gap: 4 }}>
                     <button className={view === 'table' ? 'chip chip-active' : 'chip'} onClick={() => switchView('table')} title="компактная таблица">
-                      ☰ Таблица
+                      Таблица
                     </button>
                     <button className={view === 'cards' ? 'chip chip-active' : 'chip'} onClick={() => switchView('cards')} title="крупные карточки">
-                      ▦ Карточки
+                      Карточки
                     </button>
                   </div>
                 </div>

@@ -154,4 +154,34 @@ export async function authRoutes(app: FastifyInstance) {
     reply.clearCookie(SESSION_COOKIE, { path: '/' })
     return { ok: true }
   })
+
+  // ВРЕМЕННО (до подключения VK ID): тестовый вход по имени.
+  // Включается env ALLOW_TEST_LOGIN=1 (в dev включён всегда). vkId — из дальнего
+  // диапазона (9e12+), чтобы не пересечься с реальными VK ID. Повторный вход
+  // с тем же именем возвращает тот же тестовый аккаунт.
+  app.post('/api/auth/test-login', async (req, reply) => {
+    const enabled = process.env.ALLOW_TEST_LOGIN === '1' || !isProd
+    if (!enabled) return reply.code(403).send({ error: 'тестовый вход отключён' })
+
+    const name = String((req.body as { name?: string })?.name ?? '').trim().slice(0, 40)
+    if (name.length < 2) return reply.code(400).send({ error: 'укажи имя (мин. 2 символа)' })
+
+    const vkName = `${name} (тест)`
+    let seller = await prisma.seller.findFirst({ where: { vkName } })
+    if (!seller) {
+      const vkId = 9_000_000_000_000n + BigInt(crypto.randomInt(1, 2_000_000_000))
+      seller = await prisma.seller.create({
+        data: { vkId, nick: name, vkName, photo: null, contact: 'укажи контакт в профиле', status: 'approved' },
+      })
+    }
+
+    reply.setCookie(SESSION_COOKIE, createSession(seller.vkId), {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: isProd,
+      maxAge: 30 * 24 * 60 * 60,
+    })
+    return { ok: true }
+  })
 }
