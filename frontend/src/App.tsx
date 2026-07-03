@@ -205,7 +205,7 @@ export default function App() {
         {tab === 'chats' &&
           (authed ? <ChatsPage key={chatInit.seed} meId={auth.id} initialChatId={chatInit.chatId} /> : <LoginGate what="Раздел «Чаты»" />)}
         {tab === 'seller' && (authed ? <SellerPage /> : <LoginGate what="Раздел «Мой сток»" />)}
-        {tab === 'profile' && (authed ? <ProfilePage auth={auth} onLogout={onLogout} /> : <LoginGate what="Раздел «Профиль»" />)}
+        {tab === 'profile' && (authed ? <ProfilePage auth={auth} onLogout={onLogout} onOpenChat={goChat} /> : <LoginGate what="Раздел «Профиль»" />)}
         {tab === 'admin' && <AdminPage />}
       </main>
 

@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Autocomplete } from './Autocomplete'
-import { fetchBrands, fetchModels, type Brand, type Model } from '../api/directory'
+import { fetchBrands, fetchModels, fetchCategories, createModel, type Brand, type Model, type Category } from '../api/directory'
 import { createListing, type Condition } from '../api/listings'
 
 // Добавление вручную: один товар + несколько размеров сразу.
@@ -16,10 +16,23 @@ export function ListingForm({ onCreated }: { onCreated: () => void }) {
   const [price, setPrice] = useState('')
   const [city, setCity] = useState('Москва')
   const [photo, setPhoto] = useState('')
+  const [photoOk, setPhotoOk] = useState(true)
   const [comment, setComment] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [resetKey, setResetKey] = useState(0)
+
+  // Добавление своей модели, которой нет в справочнике.
+  const [categories, setCategories] = useState<Category[]>([])
+  const [showNewModel, setShowNewModel] = useState(false)
+  const [newBrand, setNewBrand] = useState('')
+  const [newModelName, setNewModelName] = useState('')
+  const [newCategoryId, setNewCategoryId] = useState<number | ''>('')
+  const [creating, setCreating] = useState(false)
+
+  useEffect(() => {
+    fetchCategories().then(setCategories).catch(() => {})
+  }, [])
 
   const isFootwear = model?.category.slug === 'footwear'
 
@@ -27,6 +40,27 @@ export function ListingForm({ onCreated }: { onCreated: () => void }) {
     const parts = raw.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean)
     if (parts.length) setSizes((prev) => [...new Set([...prev, ...parts])])
     setSizeInput('')
+  }
+
+  async function createNewModel() {
+    setError('')
+    if (newBrand.trim().length < 2) return setError('Укажите бренд (мин. 2 символа)')
+    if (newModelName.trim().length < 2) return setError('Укажите название модели')
+    if (!newCategoryId) return setError('Выберите категорию')
+    setCreating(true)
+    try {
+      const m = await createModel({ brandName: newBrand.trim(), name: newModelName.trim(), categoryId: Number(newCategoryId) })
+      setModel(m)
+      setBrand(m.brand as Brand)
+      setShowNewModel(false)
+      setNewBrand('')
+      setNewModelName('')
+      setNewCategoryId('')
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setCreating(false)
+    }
   }
 
   async function submit() {
@@ -92,6 +126,51 @@ export function ListingForm({ onCreated }: { onCreated: () => void }) {
         }}
       />
 
+      {model ? (
+        <div className="text-2" style={{ fontSize: 13, marginTop: 6 }}>
+          Выбрано: <b>{model.brand.name} {model.name}</b>{' '}
+          <span className="text-3">· {model.category.name}</span>{' '}
+          <span style={{ color: 'var(--accent)', cursor: 'pointer' }} onClick={() => setModel(null)}>сменить</span>
+        </div>
+      ) : (
+        <div style={{ marginTop: 6 }}>
+          {!showNewModel ? (
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => {
+                setShowNewModel(true)
+                setNewBrand(brand?.name ?? '')
+              }}
+            >
+              Нет в списке? Добавить свою модель
+            </button>
+          ) : (
+            <div style={{ background: 'var(--bg-elev)', borderRadius: 10, padding: 12 }}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Новая модель в справочник</div>
+              <span className="label" style={{ marginTop: 0 }}>Бренд</span>
+              <input className="input" value={newBrand} onChange={(e) => setNewBrand(e.target.value)} placeholder="Bottega Veneta" />
+              <span className="label">Название модели</span>
+              <input className="input" value={newModelName} onChange={(e) => setNewModelName(e.target.value)} placeholder="Puddle Boot" />
+              <span className="label">Категория</span>
+              <select className="select" value={newCategoryId} onChange={(e) => setNewCategoryId(e.target.value ? Number(e.target.value) : '')}>
+                <option value="">— выбери —</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.parentId ? '— ' : ''}{c.name}
+                  </option>
+                ))}
+              </select>
+              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                <button className="btn btn-primary btn-sm" disabled={creating} onClick={createNewModel}>
+                  {creating ? 'Создаю…' : 'Создать и выбрать'}
+                </button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setShowNewModel(false)}>Отмена</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {model && (
         <>
           <span className="label">{isFootwear ? 'Размеры (US) — можно несколько' : 'Размеры — можно несколько'}</span>
@@ -142,7 +221,29 @@ export function ListingForm({ onCreated }: { onCreated: () => void }) {
           <span className="label">Город</span>
           <input className="input" value={city} onChange={(e) => setCity(e.target.value)} />
           <span className="label">Фото (ссылка)</span>
-          <input className="input" value={photo} onChange={(e) => setPhoto(e.target.value)} placeholder="https://…" />
+          <input
+            className="input"
+            value={photo}
+            onChange={(e) => {
+              setPhoto(e.target.value)
+              setPhotoOk(true)
+            }}
+            placeholder="https://…"
+          />
+          {photo.trim() && (
+            <div style={{ marginTop: 8 }}>
+              {photoOk ? (
+                <img
+                  src={photo.trim()}
+                  alt="превью"
+                  onError={() => setPhotoOk(false)}
+                  style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border)' }}
+                />
+              ) : (
+                <div className="text-danger" style={{ fontSize: 13 }}>Не удалось загрузить фото — проверь ссылку</div>
+              )}
+            </div>
+          )}
           <span className="label">Комментарий</span>
           <textarea className="textarea" value={comment} onChange={(e) => setComment(e.target.value)} />
         </>

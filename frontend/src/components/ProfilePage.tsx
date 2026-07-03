@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ProfileForm } from './ProfileForm'
 import type { AuthUser } from '../api/auth'
 import { fetchSellerProfile, responseLabel, type SellerProfile } from '../api/sellers'
+import { fetchDeals, type DealFull } from '../api/chats'
 
 const STATUS: Record<AuthUser['status'], { text: string; cls: string }> = {
   pending: { text: 'на модерации', cls: 'text-2' },
@@ -9,13 +10,25 @@ const STATUS: Record<AuthUser['status'], { text: string; cls: string }> = {
   blocked: { text: 'заблокирован', cls: 'text-danger' },
 }
 
-// Раздел «Профиль»: VK-аккаунт + данные продавца + задел под рейтинг и отзывы.
-export function ProfilePage({ auth, onLogout }: { auth: AuthUser; onLogout: () => void }) {
+const DEAL_STATUS: Record<DealFull['status'], { text: string; cls: string }> = {
+  open: { text: 'открыта', cls: 'text-accent' },
+  completed: { text: 'завершена', cls: 'text-success' },
+  cancelled: { text: 'отменена', cls: 'text-3' },
+}
+
+function dealSize(l: DealFull['listing']): string {
+  return l.sizeUs || l.sizeEu ? [l.sizeUs && `US ${l.sizeUs}`, l.sizeEu && `EU ${l.sizeEu}`].filter(Boolean).join('/') : l.size || ''
+}
+
+// Раздел «Профиль»: VK-аккаунт + данные продавца + сделки + рейтинг и отзывы.
+export function ProfilePage({ auth, onLogout, onOpenChat }: { auth: AuthUser; onLogout: () => void; onOpenChat: (chatId: number) => void }) {
   const st = STATUS[auth.status]
   const [pub, setPub] = useState<SellerProfile | null>(null)
+  const [deals, setDeals] = useState<DealFull[]>([])
 
   useEffect(() => {
     fetchSellerProfile(auth.id).then(setPub).catch(() => {})
+    fetchDeals().then(setDeals).catch(() => {})
   }, [auth.id])
 
   const stats = pub?.stats
@@ -46,6 +59,43 @@ export function ProfilePage({ auth, onLogout }: { auth: AuthUser; onLogout: () =
       </div>
 
       <ProfileForm />
+
+      <div className="section-title">Мои сделки {deals.length > 0 && <span className="text-3" style={{ fontWeight: 400, fontSize: 13 }}>· {deals.length}</span>}</div>
+      <div className="card">
+        {deals.length === 0 ? (
+          <div className="text-3" style={{ fontSize: 13 }}>
+            Сделок пока нет. Сделка появляется, когда в чате принимают предложение цены.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: 8 }}>
+            {deals.map((d) => {
+              const iAmBuyer = d.buyerId === auth.id
+              const peer = iAmBuyer ? d.seller : d.buyer
+              const ds = DEAL_STATUS[d.status]
+              const size = dealSize(d.listing)
+              return (
+                <div key={d.id} style={{ background: 'var(--bg-elev)', borderRadius: 10, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>
+                      {d.listing.model.brand.name} {d.listing.model.name}
+                      {size && <span className="text-3" style={{ fontWeight: 400 }}> · {size}</span>}
+                    </div>
+                    <div className="text-2" style={{ fontSize: 12, marginTop: 2 }}>
+                      {iAmBuyer ? 'покупка у' : 'продажа'} {peer.vkName || peer.nick} ·{' '}
+                      <b className="text-accent">{d.price.toLocaleString('ru-RU')} ₽</b> ·{' '}
+                      <span className={ds.cls} style={{ fontWeight: 600 }}>{ds.text}</span>
+                      {d.review && <span className="text-accent"> · отзыв {'★'.repeat(d.review.rating)}</span>}
+                    </div>
+                  </div>
+                  <button className="btn btn-outline btn-sm" style={{ flexShrink: 0, alignSelf: 'center' }} onClick={() => onOpenChat(d.conversationId)}>
+                    Открыть чат
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
 
       <div className="section-title">Рейтинг и отзывы</div>
       <div className="card">

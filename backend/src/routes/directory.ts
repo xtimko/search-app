@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../db'
+import { getCurrentSellerId } from './listings'
 
 // Эндпоинты единого справочника: категории, бренды, модели (для автоподстановки).
 // Поиск по названию, алиасам и артикулу; без учёта регистра; не более 20 результатов.
@@ -24,6 +25,41 @@ export async function directoryRoutes(app: FastifyInstance) {
       take: 20,
       select: { id: true, name: true },
     })
+  })
+
+  // POST /api/models — добавить модель, которой нет в справочнике (любой вошедший).
+  // Бренд создаётся по имени, если новый. Дубликаты не плодим (регистронезависимо).
+  app.post('/api/models', async (req, reply) => {
+    const me = await getCurrentSellerId(req)
+    if (!me) return reply.code(401).send({ error: 'нужен вход' })
+
+    const b = (req.body ?? {}) as { brandName?: string; name?: string; categoryId?: number }
+    const brandName = String(b.brandName ?? '').trim().slice(0, 40)
+    const name = String(b.name ?? '').trim().slice(0, 60)
+    const categoryId = Number(b.categoryId)
+    if (brandName.length < 2) return reply.code(400).send({ error: 'укажи бренд (мин. 2 символа)' })
+    if (name.length < 2) return reply.code(400).send({ error: 'укажи название модели (мин. 2 символа)' })
+    const category = await prisma.category.count({ where: { id: categoryId } })
+    if (!category) return reply.code(400).send({ error: 'выбери категорию' })
+
+    const brand =
+      (await prisma.brand.findFirst({ where: { name: { equals: brandName, mode: 'insensitive' } } })) ??
+      (await prisma.brand.create({ data: { name: brandName } }))
+
+    const select = {
+      id: true,
+      name: true,
+      sku: true,
+      brandId: true,
+      brand: { select: { id: true, name: true } },
+      category: { select: { id: true, name: true, slug: true } },
+    }
+    const existing = await prisma.model.findFirst({
+      where: { brandId: brand.id, name: { equals: name, mode: 'insensitive' } },
+      select,
+    })
+    if (existing) return existing
+    return reply.code(201).send(await prisma.model.create({ data: { brandId: brand.id, categoryId, name }, select }))
   })
 
   // GET /api/models?q=&brandId=&categoryId= — модели по названию/алиасу/артикулу,

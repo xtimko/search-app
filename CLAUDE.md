@@ -78,7 +78,7 @@
 | — доска запросов «Ищу»: матчинг, отклик=чат+оффер (`/api/requests*`) | `backend/src/routes/requests.ts` |
 | — подписанные сессии (httpOnly-cookie, HMAC) | `backend/src/session.ts` |
 | — экземпляр Prisma Client | `backend/src/db.ts` |
-| — эндпоинты справочника: `/api/categories`, `/api/brands`, `/api/models` (поиск по названию/алиасам/артикулу) | `backend/src/routes/directory.ts` |
+| — справочник: `GET /api/categories`/`brands`/`models` (поиск) + `POST /api/models` (своя модель) | `backend/src/routes/directory.ts` |
 | — эндпоинты стока: `POST`/`GET`/`PATCH`/`DELETE /api/listings` (пока от dev-продавца) | `backend/src/routes/listings.ts` |
 | — поиск покупателя: `GET /api/search` (парсер строки + фильтры) | `backend/src/routes/search.ts` |
 | — массовый импорт: `POST /api/import/preview`/`commit` | `backend/src/routes/import.ts` |

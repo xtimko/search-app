@@ -143,16 +143,15 @@ function DealsView({ meId, onOpenChat }: { meId: number; onOpenChat: (chatId: nu
             <div className="text-accent" style={{ fontSize: 13 }}>ваш отзыв: {'★'.repeat(d.review.rating)}{'☆'.repeat(5 - d.review.rating)}</div>
           ) : reviewingId === d.id ? (
             <div style={{ display: 'grid', gap: 8 }}>
-              <div style={{ display: 'flex', gap: 4 }}>
+              <div style={{ display: 'flex', gap: 2 }}>
                 {[1, 2, 3, 4, 5].map((n) => (
-                  <button
+                  <span
                     key={n}
-                    className="btn btn-sm"
-                    style={{ padding: '4px 10px', color: n <= rating ? 'var(--accent)' : 'var(--text-3)', background: 'var(--bg-elev)' }}
                     onClick={() => setRating(n)}
+                    style={{ fontSize: 30, lineHeight: 1, cursor: 'pointer', color: n <= rating ? 'var(--accent)' : 'var(--text-3)', userSelect: 'none' }}
                   >
-                    ★{n}
-                  </button>
+                    {n <= rating ? '★' : '☆'}
+                  </span>
                 ))}
               </div>
               <input className="input" value={reviewText} onChange={(e) => setReviewText(e.target.value)} placeholder="пара слов о сделке (необязательно)" />

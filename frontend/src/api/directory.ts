@@ -27,6 +27,19 @@ async function getJson<T>(url: string): Promise<T> {
   return (await res.json()) as T
 }
 
+async function postJson<T>(url: string, body: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error || `HTTP ${res.status}`)
+  }
+  return (await res.json()) as T
+}
+
 export function fetchCategories(): Promise<Category[]> {
   return getJson<Category[]>('/api/categories')
 }
@@ -39,4 +52,9 @@ export function fetchModels(q: string, brandId?: number): Promise<Model[]> {
   const params = new URLSearchParams({ q })
   if (brandId) params.set('brandId', String(brandId))
   return getJson<Model[]>(`/api/models?${params.toString()}`)
+}
+
+// Добавить модель, которой нет в справочнике (бренд создаётся, если новый).
+export function createModel(input: { brandName: string; name: string; categoryId: number }): Promise<Model> {
+  return postJson<Model>('/api/models', input)
 }
