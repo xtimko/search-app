@@ -57,6 +57,7 @@ model Model {
   aliases    String[]  @default([])
   sku        String?
   listings   Listing[]
+  requests   Request[]
 
   @@unique([brandId, name])
   @@index([categoryId])
@@ -84,6 +85,7 @@ model Listing {
   reserved  Boolean   @default(false) // в открытой сделке (скрыто из поиска)
   conversations Conversation[]
   deals     Deal[]
+  requestResponses RequestResponse[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -136,6 +138,46 @@ model Deal {
   @@index([buyerId])
   @@index([sellerId])
   @@index([listingId, status])
+}
+
+// Статус запроса «Ищу».
+enum RequestStatus {
+  active
+  closed
+}
+
+// Запрос покупателя «Ищу»: модель из справочника + размер/бюджет/город.
+model Request {
+  id        Int           @id @default(autoincrement())
+  buyerId   Int
+  buyer     Seller        @relation("requests", fields: [buyerId], references: [id])
+  modelId   Int
+  model     Model         @relation(fields: [modelId], references: [id])
+  size      String? // желаемый размер (US/EU/одежда — строкой)
+  maxPrice  Int? // бюджет, ₽
+  city      String?
+  comment   String?
+  status    RequestStatus @default(active)
+  responses RequestResponse[]
+  createdAt DateTime      @default(now())
+
+  @@index([status, createdAt])
+  @@index([buyerId])
+}
+
+// Отклик продавца на запрос: конкретная позиция → чат с оффером.
+model RequestResponse {
+  id             Int      @id @default(autoincrement())
+  requestId      Int
+  request        Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  sellerId       Int
+  seller         Seller   @relation("requestResponses", fields: [sellerId], references: [id])
+  listingId      Int
+  listing        Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  conversationId Int
+  createdAt      DateTime @default(now())
+
+  @@unique([requestId, listingId])
 }
 
 // Отзыв покупателя о продавце по завершённой сделке (один на сделку).
@@ -209,6 +251,8 @@ model Seller {
   sellerDeals Deal[] @relation("sellerDeals")
   reviewsReceived Review[] @relation("reviewsReceived")
   reviewsAuthored Review[] @relation("reviewsAuthored")
+  requests    Request[] @relation("requests")
+  requestResponses RequestResponse[] @relation("requestResponses")
   messages    Message[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt

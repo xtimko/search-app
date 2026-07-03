@@ -8,6 +8,7 @@ import { authRoutes } from './routes/auth'
 import { chatRoutes } from './routes/chats'
 import { dealRoutes } from './routes/deals'
 import { sellerRoutesPublic } from './routes/sellers'
+import { requestRoutes } from './routes/requests'
 import { directoryRoutes } from './routes/directory'
 import { listingRoutes } from './routes/listings'
 import { searchRoutes } from './routes/search'
@@ -36,6 +37,8 @@ app.register(chatRoutes)
 app.register(dealRoutes)
 // Публичные профили продавцов (рейтинг, отзывы).
 app.register(sellerRoutesPublic)
+// Доска запросов «Ищу».
+app.register(requestRoutes)
 // Эндпоинты единого справочника брендов/моделей.
 app.register(directoryRoutes)
 // Эндпоинты стока (листинги продавца).

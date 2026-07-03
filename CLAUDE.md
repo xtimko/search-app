@@ -38,7 +38,7 @@
 | **Фронтенд** (Vite + React + TS) | `frontend/` |
 | — точка входа React | `frontend/src/main.tsx` |
 | — дизайн-система (тёмный street: токены + классы btn/chip/card/input) | `frontend/src/styles/theme.css` |
-| — оболочка: топбар, вкладки Главная/Поиск/Запросы(скоро)/Мой сток/Профиль/Админ | `frontend/src/App.tsx` |
+| — оболочка: топбар (десктоп) + нижний таб-бар (мобайл), вкладки | `frontend/src/App.tsx` |
 | — главная: hero-поиск, категории, горячие предложения, тизер запросов | `frontend/src/components/HomePage.tsx` |
 | — карточка товара в выдаче (поиск + главная) | `frontend/src/components/ResultCard.tsx` |
 | — страница покупателя: поиск + фильтры + карточки | `frontend/src/components/SearchPage.tsx` |
@@ -53,6 +53,8 @@
 | — клиент чатов и сделок (`/api/chats*`, `/api/deals*`) | `frontend/src/api/chats.ts` |
 | — клиент публичного профиля продавца | `frontend/src/api/sellers.ts` |
 | — мини-профиль продавца (модал: метрики, отзывы, товары) | `frontend/src/components/SellerModal.tsx` |
+| — доска запросов: форма + лента + отклик (`RequestsPage`) | `frontend/src/components/RequestsPage.tsx` |
+| — клиент доски запросов | `frontend/src/api/requests.ts` |
 | — раздел «Чаты»: диалоги + окно (офферы, плашка сделки) + под-вкладка «Сделки» | `frontend/src/components/ChatsPage.tsx` |
 | — гейт «Войти через VK» для приватных разделов | `frontend/src/components/LoginGate.tsx` |
 | — vk-bridge: init + мягкая авторизация (личность по vk_id, Mini App-контекст) | `frontend/src/vk.ts` |
@@ -73,6 +75,7 @@
 | — чаты: диалоги по товару, сообщения, unread (`/api/chats*`) | `backend/src/routes/chats.ts` |
 | — сделки: офферы в чате, accept/confirm/cancel, резерв, отзыв (`/api/deals*`) | `backend/src/routes/deals.ts` |
 | — публичный профиль продавца: метрики/отзывы/товары (`/api/sellers/:id/profile`) | `backend/src/routes/sellers.ts` |
+| — доска запросов «Ищу»: матчинг, отклик=чат+оффер (`/api/requests*`) | `backend/src/routes/requests.ts` |
 | — подписанные сессии (httpOnly-cookie, HMAC) | `backend/src/session.ts` |
 | — экземпляр Prisma Client | `backend/src/db.ts` |
 | — эндпоинты справочника: `/api/categories`, `/api/brands`, `/api/models` (поиск по названию/алиасам/артикулу) | `backend/src/routes/directory.ts` |
@@ -81,7 +84,7 @@
 | — массовый импорт: `POST /api/import/preview`/`commit` | `backend/src/routes/import.ts` |
 | — профиль продавца: `GET`/`PATCH /api/seller/me` | `backend/src/routes/seller.ts` |
 | — админка: модерация продавцов + справочник (`/api/admin/*`) | `backend/src/routes/admin.ts` |
-| **Схема БД** (PostgreSQL): Category(дерево), Brand, Model, Listing, Seller, Conversation, Message, Deal, Review | `prisma/schema.prisma` |
+| **Схема БД** (PostgreSQL): Category(дерево), Brand, Model, Listing, Seller, Conversation, Message, Deal, Review, Request(+Response) | `prisma/schema.prisma` |
 | История миграций (init + catalog_revision) | `prisma/migrations/` |
 | Seed справочника (категории + бренды + модели, с алиасами) | `prisma/seed.ts` |
 | Анализ реального чата запросов (спрос, форматы) | `docs/research/vk_chat_analysis.md` |
