@@ -32,6 +32,7 @@ export interface Deal {
   status: 'open' | 'completed' | 'cancelled'
   buyerConfirmed: boolean
   sellerConfirmed: boolean
+  review?: { id: number; rating: number } | null
   createdAt: string
   closedAt: string | null
 }
@@ -137,4 +138,12 @@ export function confirmDeal(id: number): Promise<DealFull> {
 
 export function cancelDeal(id: number): Promise<DealFull> {
   return req<DealFull>(`/api/deals/${id}/cancel`, { method: 'POST' })
+}
+
+export function reviewDeal(id: number, rating: number, text: string): Promise<{ id: number }> {
+  return req<{ id: number }>(`/api/deals/${id}/review`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rating, text }),
+  })
 }

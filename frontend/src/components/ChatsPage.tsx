@@ -9,6 +9,7 @@ import {
   fetchDeals,
   confirmDeal,
   cancelDeal,
+  reviewDeal,
   type Conversation,
   type ChatMessage,
   type ChatPeer,
@@ -83,6 +84,9 @@ function DealsView({ meId, onOpenChat }: { meId: number; onOpenChat: (chatId: nu
   const [deals, setDeals] = useState<DealFull[]>([])
   const [loaded, setLoaded] = useState(false)
   const [busy, setBusy] = useState(0)
+  const [reviewingId, setReviewingId] = useState(0)
+  const [rating, setRating] = useState(5)
+  const [reviewText, setReviewText] = useState('')
 
   function load() {
     fetchDeals()
@@ -134,6 +138,43 @@ function DealsView({ meId, onOpenChat }: { meId: number; onOpenChat: (chatId: nu
           {iAmBuyer ? 'покупаю у' : 'продаю'} {peer.vkName || peer.nick} ·{' '}
           <b className="text-accent">{d.price.toLocaleString('ru-RU')} ₽</b> · {fmtTime(d.createdAt)}
         </div>
+        {d.status === 'completed' && iAmBuyer && (
+          d.review ? (
+            <div className="text-accent" style={{ fontSize: 13 }}>ваш отзыв: {'★'.repeat(d.review.rating)}{'☆'.repeat(5 - d.review.rating)}</div>
+          ) : reviewingId === d.id ? (
+            <div style={{ display: 'grid', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    className="btn btn-sm"
+                    style={{ padding: '4px 10px', color: n <= rating ? 'var(--accent)' : 'var(--text-3)', background: 'var(--bg-elev)' }}
+                    onClick={() => setRating(n)}
+                  >
+                    ★{n}
+                  </button>
+                ))}
+              </div>
+              <input className="input" value={reviewText} onChange={(e) => setReviewText(e.target.value)} placeholder="пара слов о сделке (необязательно)" />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="btn btn-primary btn-sm"
+                  disabled={busy === d.id}
+                  onClick={() => act(d.id, async () => { await reviewDeal(d.id, rating, reviewText); setReviewingId(0); setReviewText('') })}
+                >
+                  Отправить отзыв
+                </button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setReviewingId(0)}>Отмена</button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <button className="btn btn-outline btn-sm" onClick={() => { setReviewingId(d.id); setRating(5); setReviewText('') }}>
+                Оставить отзыв
+              </button>
+            </div>
+          )
+        )}
         {d.status === 'open' && (
           <>
             <div className="text-3" style={{ fontSize: 12 }}>

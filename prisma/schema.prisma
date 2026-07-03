@@ -129,12 +129,29 @@ model Deal {
   status          DealStatus   @default(open)
   buyerConfirmed  Boolean      @default(false)
   sellerConfirmed Boolean      @default(false)
+  review          Review?
   createdAt       DateTime     @default(now())
   closedAt        DateTime?
 
   @@index([buyerId])
   @@index([sellerId])
   @@index([listingId, status])
+}
+
+// Отзыв покупателя о продавце по завершённой сделке (один на сделку).
+model Review {
+  id        Int      @id @default(autoincrement())
+  dealId    Int      @unique
+  deal      Deal     @relation(fields: [dealId], references: [id])
+  sellerId  Int // кому отзыв
+  seller    Seller   @relation("reviewsReceived", fields: [sellerId], references: [id])
+  authorId  Int
+  author    Seller   @relation("reviewsAuthored", fields: [authorId], references: [id])
+  rating    Int // 1..5
+  text      String?
+  createdAt DateTime @default(now())
+
+  @@index([sellerId])
 }
 
 // Диалог покупателя с продавцом по конкретному товару.
@@ -190,6 +207,8 @@ model Seller {
   sellerConversations Conversation[] @relation("sellerConversations")
   buyerDeals  Deal[] @relation("buyerDeals")
   sellerDeals Deal[] @relation("sellerDeals")
+  reviewsReceived Review[] @relation("reviewsReceived")
+  reviewsAuthored Review[] @relation("reviewsAuthored")
   messages    Message[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt

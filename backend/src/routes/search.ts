@@ -123,11 +123,30 @@ export async function searchRoutes(app: FastifyInstance) {
           },
         },
         seller: {
-          select: { nick: true, contact: true, city: true, experience: true, status: true },
+          select: { id: true, nick: true, vkName: true, photo: true, contact: true, city: true, experience: true, status: true },
         },
       },
     })
 
-    return { parsed, results }
+    // Рейтинг продавцов выдачи (агрегатами, чтобы не считать по одному).
+    const sellerIds = [...new Set(results.map((r) => r.seller.id))]
+    const [ratings, deals] = await Promise.all([
+      prisma.review.groupBy({ by: ['sellerId'], where: { sellerId: { in: sellerIds } }, _avg: { rating: true }, _count: true }),
+      prisma.deal.groupBy({ by: ['sellerId'], where: { sellerId: { in: sellerIds }, status: 'completed' }, _count: true }),
+    ])
+    const ratingBySeller = new Map(ratings.map((r) => [r.sellerId, { avg: Math.round((r._avg.rating ?? 0) * 10) / 10, count: r._count }]))
+    const dealsBySeller = new Map(deals.map((d) => [d.sellerId, d._count]))
+
+    const enriched = results.map((r) => ({
+      ...r,
+      seller: {
+        ...r.seller,
+        rating: ratingBySeller.get(r.seller.id)?.avg ?? null,
+        reviewsCount: ratingBySeller.get(r.seller.id)?.count ?? 0,
+        dealsCompleted: dealsBySeller.get(r.seller.id) ?? 0,
+      },
+    }))
+
+    return { parsed, results: enriched }
   })
 }

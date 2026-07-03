@@ -27,6 +27,7 @@ const dealInclude = {
   },
   buyer: { select: { id: true, nick: true, vkName: true, photo: true } },
   seller: { select: { id: true, nick: true, vkName: true, photo: true } },
+  review: { select: { id: true, rating: true } },
 } as const
 
 function fmtPrice(p: number): string {
@@ -189,6 +190,28 @@ export async function dealRoutes(app: FastifyInstance) {
 
     const [updated] = await prisma.$transaction(ops)
     return updated
+  })
+
+  // POST /api/deals/:id/review { rating, text? } — отзыв покупателя по завершённой сделке.
+  app.post<{ Params: { id: string } }>('/api/deals/:id/review', async (req, reply) => {
+    const me = await requireAuth(req, reply)
+    if (!me) return
+    const id = Number(req.params.id)
+    const body = (req.body ?? {}) as { rating?: number; text?: string }
+    const rating = Math.round(Number(body.rating))
+    if (!rating || rating < 1 || rating > 5) return reply.code(400).send({ error: 'оценка — от 1 до 5' })
+    const text = String(body.text ?? '').trim().slice(0, 1000) || null
+
+    const deal = await prisma.deal.findUnique({ where: { id }, select: { buyerId: true, sellerId: true, status: true } })
+    if (!deal || deal.buyerId !== me) return reply.code(404).send({ error: 'сделка не найдена' })
+    if (deal.status !== 'completed') return reply.code(400).send({ error: 'отзыв — только по завершённой сделке' })
+    const exists = await prisma.review.count({ where: { dealId: id } })
+    if (exists) return reply.code(400).send({ error: 'отзыв уже оставлен' })
+
+    const review = await prisma.review.create({
+      data: { dealId: id, sellerId: deal.sellerId, authorId: me, rating, text },
+    })
+    return reply.code(201).send(review)
   })
 
   // POST /api/deals/:id/cancel — отменить открытую сделку (любая сторона).

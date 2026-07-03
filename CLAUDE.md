@@ -50,7 +50,9 @@
 | — клиент профиля (`/api/seller/me`) | `frontend/src/api/seller.ts` |
 | — клиент админки (`/api/admin/*`) | `frontend/src/api/admin.ts` |
 | — клиент авторизации VK ID (`/api/auth/*`) | `frontend/src/api/auth.ts` |
-| — клиент чатов (`/api/chats*`) | `frontend/src/api/chats.ts` |
+| — клиент чатов и сделок (`/api/chats*`, `/api/deals*`) | `frontend/src/api/chats.ts` |
+| — клиент публичного профиля продавца | `frontend/src/api/sellers.ts` |
+| — мини-профиль продавца (модал: метрики, отзывы, товары) | `frontend/src/components/SellerModal.tsx` |
 | — раздел «Чаты»: диалоги + окно (офферы, плашка сделки) + под-вкладка «Сделки» | `frontend/src/components/ChatsPage.tsx` |
 | — гейт «Войти через VK» для приватных разделов | `frontend/src/components/LoginGate.tsx` |
 | — vk-bridge: init + мягкая авторизация (личность по vk_id, Mini App-контекст) | `frontend/src/vk.ts` |
@@ -69,7 +71,8 @@
 | — сервер: `/health`, регистрация роутов, раздача SPA (прод), закрытие БД | `backend/src/index.ts` |
 | — VK ID OAuth: login/callback/me/logout | `backend/src/routes/auth.ts` |
 | — чаты: диалоги по товару, сообщения, unread (`/api/chats*`) | `backend/src/routes/chats.ts` |
-| — сделки: офферы в чате, accept/confirm/cancel, резерв (`/api/deals*`) | `backend/src/routes/deals.ts` |
+| — сделки: офферы в чате, accept/confirm/cancel, резерв, отзыв (`/api/deals*`) | `backend/src/routes/deals.ts` |
+| — публичный профиль продавца: метрики/отзывы/товары (`/api/sellers/:id/profile`) | `backend/src/routes/sellers.ts` |
 | — подписанные сессии (httpOnly-cookie, HMAC) | `backend/src/session.ts` |
 | — экземпляр Prisma Client | `backend/src/db.ts` |
 | — эндпоинты справочника: `/api/categories`, `/api/brands`, `/api/models` (поиск по названию/алиасам/артикулу) | `backend/src/routes/directory.ts` |
@@ -78,7 +81,7 @@
 | — массовый импорт: `POST /api/import/preview`/`commit` | `backend/src/routes/import.ts` |
 | — профиль продавца: `GET`/`PATCH /api/seller/me` | `backend/src/routes/seller.ts` |
 | — админка: модерация продавцов + справочник (`/api/admin/*`) | `backend/src/routes/admin.ts` |
-| **Схема БД** (PostgreSQL): Category(дерево), Brand, Model, Listing, Seller, Conversation, Message, Deal | `prisma/schema.prisma` |
+| **Схема БД** (PostgreSQL): Category(дерево), Brand, Model, Listing, Seller, Conversation, Message, Deal, Review | `prisma/schema.prisma` |
 | История миграций (init + catalog_revision) | `prisma/migrations/` |
 | Seed справочника (категории + бренды + модели, с алиасами) | `prisma/seed.ts` |
 | Анализ реального чата запросов (спрос, форматы) | `docs/research/vk_chat_analysis.md` |

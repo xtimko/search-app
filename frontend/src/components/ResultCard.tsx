@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import type { SearchResult } from '../api/search'
+import { SellerModal } from './SellerModal'
 
 function sizeLabel(r: SearchResult): string {
   if (r.sizeUs || r.sizeEu) {
@@ -7,9 +9,10 @@ function sizeLabel(r: SearchResult): string {
   return r.size || '—'
 }
 
-// Карточка товара в выдаче (поиск, главная). onContact — открыть внутренний чат;
-// без него — внешний контакт продавца.
+// Карточка товара в выдаче (поиск, главная). Клик по продавцу — его мини-профиль.
 export function ResultCard({ r, compact, onContact }: { r: SearchResult; compact?: boolean; onContact?: (r: SearchResult) => void }) {
+  const [showSeller, setShowSeller] = useState(false)
+
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', gap: 12 }}>
@@ -32,10 +35,19 @@ export function ResultCard({ r, compact, onContact }: { r: SearchResult; compact
             {r.price.toLocaleString('ru-RU')} ₽
           </div>
           {!compact && (
-            <div className="text-3" style={{ fontSize: 12, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div
+              className="text-3"
+              style={{ fontSize: 12, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }}
+              onClick={() => setShowSeller(true)}
+              title="профиль продавца"
+            >
               {r.colorway ? `${r.colorway} · ` : ''}
-              {r.seller.nick}
+              <span style={{ textDecoration: 'underline dotted' }}>{r.seller.vkName || r.seller.nick}</span>
               {r.seller.status === 'approved' && <span className="text-success"> ✓</span>}
+              {r.seller.rating != null && (
+                <span className="text-accent"> ★{r.seller.rating}{r.seller.reviewsCount ? ` (${r.seller.reviewsCount})` : ''}</span>
+              )}
+              {r.seller.dealsCompleted > 0 && ` · ${r.seller.dealsCompleted} сд.`}
               {(r.city || r.seller.city) && ` · ${r.city || r.seller.city}`}
             </div>
           )}
@@ -47,6 +59,7 @@ export function ResultCard({ r, compact, onContact }: { r: SearchResult; compact
       >
         Написать продавцу
       </button>
+      {showSeller && <SellerModal sellerId={r.seller.id} onClose={() => setShowSeller(false)} />}
     </div>
   )
 }

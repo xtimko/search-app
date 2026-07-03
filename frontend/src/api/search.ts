@@ -13,7 +13,19 @@ export interface SearchResult {
   city: string | null
   photo: string | null
   model: { name: string; brand: { name: string }; category: { name: string; slug: string } }
-  seller: { nick: string; contact: string; city: string | null; experience: string | null; status: string }
+  seller: {
+    id: number
+    nick: string
+    vkName: string | null
+    photo: string | null
+    contact: string
+    city: string | null
+    experience: string | null
+    status: string
+    rating: number | null
+    reviewsCount: number
+    dealsCompleted: number
+  }
 }
 
 export interface SearchResponse {
