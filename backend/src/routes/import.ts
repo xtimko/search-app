@@ -13,6 +13,7 @@ const KEYS = {
   size: ['размер', 'размеры', 'size', 'sizes'],
   condition: ['состояние', 'condition'],
   price: ['цена', 'price'],
+  city: ['город', 'city'],
   photo: ['фото', 'photo', 'ссылка'],
   comment: ['комментарий', 'comment', 'коммент'],
 }
@@ -68,6 +69,7 @@ interface ListingData {
   size?: string
   condition: 'new' | 'used'
   price: number
+  city: string | null
   photo: string | null
   comment: string | null
 }
@@ -77,6 +79,7 @@ async function resolveRow(raw: Raw, index: number) {
   const modelText = pick(raw, KEYS.model)
   const sizeText = pick(raw, KEYS.size)
   const priceText = pick(raw, KEYS.price)
+  const city = pick(raw, KEYS.city)
   const photo = pick(raw, KEYS.photo)
   const comment = pick(raw, KEYS.comment)
 
@@ -103,6 +106,7 @@ async function resolveRow(raw: Raw, index: number) {
           size: !isFootwear && s ? s : undefined,
           condition,
           price: priceNum,
+          city: city || null,
           photo: photo || null,
           comment: comment || null,
         }))

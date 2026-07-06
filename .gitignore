@@ -4,3 +4,6 @@ dist/
 *.log
 .DS_Store
 .obsidian/
+
+# Мок-данные для тестового импорта (не в репо)
+mock-stock-50.*

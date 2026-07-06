@@ -60,7 +60,7 @@ export function ImportPanel({ onImported }: { onImported: () => void }) {
         <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={onFile} disabled={busy} style={{ fontSize: 13, color: 'var(--text-2)' }} />
       </div>
       <div className="hint">
-        Колонки: бренд, модель, размер, состояние, цена, фото, комментарий. В «размер» можно несколько через запятую: <b>8, 9, 10</b> — создастся позиция на каждый.
+        Колонки: бренд, модель, размер, состояние, цена, город, фото, комментарий. В «размер» можно несколько через запятую: <b>8, 9, 10</b> — создастся позиция на каждый. Город можно не указывать.
       </div>
 
       {error && <div className="text-danger" style={{ fontSize: 13, marginTop: 10 }}>{error}</div>}

@@ -24,15 +24,15 @@ export interface PreviewResponse {
   totalItems: number
 }
 
-const TEMPLATE_HEADERS = ['бренд', 'модель', 'размер', 'состояние', 'цена', 'фото', 'комментарий']
+const TEMPLATE_HEADERS = ['бренд', 'модель', 'размер', 'состояние', 'цена', 'город', 'фото', 'комментарий']
 
 // Скачать .xlsx-шаблон с нужными колонками и примерами.
 export function downloadTemplate() {
   const ws = XLSX.utils.aoa_to_sheet([
     TEMPLATE_HEADERS,
-    ['Nike', 'Air Force 1', '8, 9, 10', 'новое', '12000', 'https://example.com/photo.jpg', 'размеры через запятую'],
-    ['New Balance', '2002R', '42, 43, 44', 'новое', '15000', '', ''],
-    ['Supreme', 'Box Logo Hoodie', 'M, L', 'б/у', '30000', '', ''],
+    ['Nike', 'Air Force 1', '8, 9, 10', 'новое', '12000', 'Москва', 'https://example.com/photo.jpg', 'размеры через запятую'],
+    ['New Balance', '2002R', '42, 43, 44', 'новое', '15000', 'СПб', '', ''],
+    ['Supreme', 'Box Logo Hoodie', 'M, L', 'б/у', '30000', '', '', 'город можно не указывать'],
   ])
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'сток')
