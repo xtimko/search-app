@@ -80,7 +80,7 @@
 | — экземпляр Prisma Client | `backend/src/db.ts` |
 | — справочник: `GET /api/categories`/`brands`/`models` (поиск) + `POST /api/models` (своя модель) | `backend/src/routes/directory.ts` |
 | — эндпоинты стока: `POST`/`GET`/`PATCH`/`DELETE /api/listings` (пока от dev-продавца) | `backend/src/routes/listings.ts` |
-| — поиск покупателя: `GET /api/search` (парсер строки + фильтры) | `backend/src/routes/search.ts` |
+| — поиск покупателя: `GET /api/search` (парсер строки + нечёткий поиск pg_trgm + ранжирование + фильтры) | `backend/src/routes/search.ts` |
 | — массовый импорт: `POST /api/import/preview`/`commit` | `backend/src/routes/import.ts` |
 | — профиль продавца: `GET`/`PATCH /api/seller/me` | `backend/src/routes/seller.ts` |
 | — админка: модерация продавцов + справочник (`/api/admin/*`) | `backend/src/routes/admin.ts` |

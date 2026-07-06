@@ -35,6 +35,38 @@ function parseQuery(raw: string): { text: string; sizeUs: string | null; sizeEu:
   return { text: s.replace(/\s+/g, ' ').trim(), sizeUs, sizeEu }
 }
 
+// Релевантный подбор моделей под текст запроса (pg_trgm).
+// Возвращает Map<modelId, score>: точные/префиксные/алиасные совпадения — выше,
+// затем нечёткие (устойчивы к опечаткам и сокращениям). score примерно 0..2.3.
+async function matchModels(text: string): Promise<Map<number, number>> {
+  const q = text.trim().toLowerCase()
+  if (q.length < 2) return new Map()
+
+  // doc = бренд + модель + алиасы (модели и бренда) + артикул — единая строка для похожести.
+  const rows = await prisma.$queryRaw<{ id: number; score: number }[]>`
+    SELECT m.id::int AS id,
+      (
+        word_similarity(${q}, lower(doc.d))
+        + CASE WHEN lower(doc.d) LIKE '%' || ${q} || '%' THEN 0.5 ELSE 0 END
+        + CASE WHEN lower(m.name) LIKE ${q} || '%' THEN 0.3 ELSE 0 END
+        + CASE WHEN ${q} = ANY(m.aliases) OR ${q} = ANY(b.aliases) THEN 0.7 ELSE 0 END
+      )::float8 AS score
+    FROM "Model" m
+    JOIN "Brand" b ON b.id = m."brandId"
+    CROSS JOIN LATERAL (
+      SELECT b.name || ' ' || m.name || ' '
+        || coalesce(array_to_string(m.aliases, ' '), '') || ' '
+        || coalesce(array_to_string(b.aliases, ' '), '') || ' '
+        || coalesce(m.sku, '') AS d
+    ) doc
+    WHERE word_similarity(${q}, lower(doc.d)) > 0.3
+       OR lower(doc.d) LIKE '%' || ${q} || '%'
+    ORDER BY score DESC
+    LIMIT 80
+  `
+  return new Map(rows.map((r) => [Number(r.id), Number(r.score)]))
+}
+
 export async function searchRoutes(app: FastifyInstance) {
   // GET /api/search — поиск покупателя по стоку (в наличии, продавцы approved).
   app.get<{
@@ -65,22 +97,12 @@ export async function searchRoutes(app: FastifyInstance) {
       { seller: { status: 'approved' } },
     ]
 
-    // Текст → по словам матчим бренд/модель/алиас/артикул (каждое слово должно совпасть).
-    for (const w of parsed.text.split(' ').filter((x) => x.length >= 2)) {
-      and.push({
-        model: {
-          OR: [
-            { name: { contains: w, mode: 'insensitive' } },
-            { aliases: { has: w } },
-            { sku: { contains: w, mode: 'insensitive' } },
-            {
-              brand: {
-                OR: [{ name: { contains: w, mode: 'insensitive' } }, { aliases: { has: w } }],
-              },
-            },
-          ],
-        },
-      })
+    // Текст → релевантный подбор моделей (pg_trgm): опечатки/сокращения ок, ранжируем ниже.
+    let scoreByModel = new Map<number, number>()
+    if (parsed.text.length >= 2) {
+      scoreByModel = await matchModels(parsed.text)
+      if (scoreByModel.size === 0) return { parsed, results: [] } // текст задан, но совпадений нет
+      and.push({ modelId: { in: [...scoreByModel.keys()] } })
     }
 
     if (brandId) and.push({ model: { brandId } })
@@ -99,12 +121,15 @@ export async function searchRoutes(app: FastifyInstance) {
     const orderBy: Prisma.ListingOrderByWithRelationInput =
       sort === 'price_desc' ? { price: 'desc' } : sort === 'new' ? { createdAt: 'desc' } : { price: 'asc' }
 
+    const hasText = scoreByModel.size > 0
     const results = await prisma.listing.findMany({
       where: { AND: and },
       orderBy,
-      take: 100,
+      // при текстовом поиске берём с запасом и переупорядочиваем по релевантности
+      take: hasText ? 300 : 100,
       select: {
         id: true,
+        modelId: true,
         sizeUs: true,
         sizeEu: true,
         size: true,
@@ -128,8 +153,20 @@ export async function searchRoutes(app: FastifyInstance) {
       },
     })
 
+    // При текстовом поиске переупорядочиваем по релевантности (бакеты по 0.1),
+    // внутри бакета — по выбранной сортировке; затем срез до 100.
+    let ordered = results
+    if (hasText) {
+      const bucket = (id: number) => Math.round((scoreByModel.get(id) ?? 0) * 10)
+      const secondary = (a: typeof results[number], b: typeof results[number]) =>
+        sort === 'price_desc' ? b.price - a.price : sort === 'new' ? 0 : a.price - b.price
+      ordered = [...results]
+        .sort((a, b) => bucket(b.modelId) - bucket(a.modelId) || secondary(a, b))
+        .slice(0, 100)
+    }
+
     // Рейтинг продавцов выдачи (агрегатами, чтобы не считать по одному).
-    const sellerIds = [...new Set(results.map((r) => r.seller.id))]
+    const sellerIds = [...new Set(ordered.map((r) => r.seller.id))]
     const [ratings, deals] = await Promise.all([
       prisma.review.groupBy({ by: ['sellerId'], where: { sellerId: { in: sellerIds } }, _avg: { rating: true }, _count: true }),
       prisma.deal.groupBy({ by: ['sellerId'], where: { sellerId: { in: sellerIds }, status: 'completed' }, _count: true }),
@@ -137,7 +174,7 @@ export async function searchRoutes(app: FastifyInstance) {
     const ratingBySeller = new Map(ratings.map((r) => [r.sellerId, { avg: Math.round((r._avg.rating ?? 0) * 10) / 10, count: r._count }]))
     const dealsBySeller = new Map(deals.map((d) => [d.sellerId, d._count]))
 
-    const enriched = results.map((r) => ({
+    const enriched = ordered.map((r) => ({
       ...r,
       seller: {
         ...r.seller,
