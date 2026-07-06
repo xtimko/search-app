@@ -59,6 +59,7 @@ model Model {
   imageUrl   String? // каталожное фото модели (подставляется в выдаче, если у объявления нет своего)
   listings   Listing[]
   requests   Request[]
+  searchLogs SearchLog[]
 
   @@unique([brandId, name])
   @@index([categoryId])
@@ -139,6 +140,19 @@ model Deal {
   @@index([buyerId])
   @@index([sellerId])
   @@index([listingId, status])
+}
+
+// Лог поискового запроса (для аналитики спроса). Пишется при поиске с текстом.
+model SearchLog {
+  id        Int      @id @default(autoincrement())
+  query     String // нормализованный текст запроса
+  modelId   Int? // сматченная модель (топ по релевантности), null — не распознали
+  model     Model?   @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  city      String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([modelId])
 }
 
 // Статус запроса «Ищу».

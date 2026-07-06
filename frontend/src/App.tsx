@@ -6,12 +6,13 @@ import { ProfilePage } from './components/ProfilePage'
 import { AdminPage } from './components/AdminPage'
 import { ChatsPage } from './components/ChatsPage'
 import { RequestsPage } from './components/RequestsPage'
+import { AnalyticsPage } from './components/AnalyticsPage'
 import { LoginGate } from './components/LoginGate'
 import { fetchAuthMe, logout, type AuthUser } from './api/auth'
 import { openChat, fetchUnread } from './api/chats'
 import type { SearchResult } from './api/search'
 
-export type Tab = 'home' | 'search' | 'requests' | 'chats' | 'seller' | 'profile' | 'admin'
+export type Tab = 'home' | 'search' | 'requests' | 'chats' | 'seller' | 'analytics' | 'profile' | 'admin'
 
 const NAV: { id: Tab; label: string }[] = [
   { id: 'home', label: 'Главная' },
@@ -19,6 +20,7 @@ const NAV: { id: Tab; label: string }[] = [
   { id: 'requests', label: 'Запросы' },
   { id: 'chats', label: 'Чаты' },
   { id: 'seller', label: 'Мой сток' },
+  { id: 'analytics', label: 'Аналитика' },
   { id: 'profile', label: 'Профиль' },
   { id: 'admin', label: 'Админ' },
 ]
@@ -205,7 +207,8 @@ export default function App() {
         {tab === 'chats' &&
           (authed ? <ChatsPage key={chatInit.seed} meId={auth.id} initialChatId={chatInit.chatId} /> : <LoginGate what="Раздел «Чаты»" />)}
         {tab === 'seller' && (authed ? <SellerPage /> : <LoginGate what="Раздел «Мой сток»" />)}
-        {tab === 'profile' && (authed ? <ProfilePage auth={auth} onLogout={onLogout} onOpenChat={goChat} /> : <LoginGate what="Раздел «Профиль»" />)}
+        {tab === 'analytics' && (authed ? <AnalyticsPage /> : <LoginGate what="Аналитика спроса" />)}
+        {tab === 'profile' && (authed ? <ProfilePage auth={auth} onLogout={onLogout} onOpenChat={goChat} onOpenAnalytics={() => setTab('analytics')} /> : <LoginGate what="Раздел «Профиль»" />)}
         {tab === 'admin' && <AdminPage />}
       </main>
 

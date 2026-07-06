@@ -55,6 +55,8 @@
 | — мини-профиль продавца (модал: метрики, отзывы, товары) | `frontend/src/components/SellerModal.tsx` |
 | — доска запросов: форма + лента + отклик (`RequestsPage`) | `frontend/src/components/RequestsPage.tsx` |
 | — клиент доски запросов | `frontend/src/api/requests.ts` |
+| — раздел «Аналитика спроса» (PRO): дефицит, что ищут, продажи, unmet | `frontend/src/components/AnalyticsPage.tsx` |
+| — клиент аналитики (`/api/analytics/*`) | `frontend/src/api/analytics.ts` |
 | — раздел «Чаты»: диалоги + окно (офферы, плашка сделки) + под-вкладка «Сделки» | `frontend/src/components/ChatsPage.tsx` |
 | — гейт «Войти через VK» для приватных разделов | `frontend/src/components/LoginGate.tsx` |
 | — vk-bridge: init + мягкая авторизация (личность по vk_id, Mini App-контекст) | `frontend/src/vk.ts` |
@@ -76,6 +78,7 @@
 | — сделки: офферы в чате, accept/confirm/cancel, резерв, отзыв (`/api/deals*`) | `backend/src/routes/deals.ts` |
 | — публичный профиль продавца: метрики/отзывы/товары (`/api/sellers/:id/profile`) | `backend/src/routes/sellers.ts` |
 | — доска запросов «Ищу»: матчинг, отклик=чат+оффер (`/api/requests*`) | `backend/src/routes/requests.ts` |
+| — аналитика спроса (PRO): `/api/analytics/demand` (спрос/дефицит/продажи/unmet) | `backend/src/routes/analytics.ts` |
 | — подписанные сессии (httpOnly-cookie, HMAC) | `backend/src/session.ts` |
 | — экземпляр Prisma Client | `backend/src/db.ts` |
 | — справочник: `GET /api/categories`/`brands`/`models` (поиск) + `POST /api/models` (своя модель) | `backend/src/routes/directory.ts` |
@@ -84,7 +87,7 @@
 | — массовый импорт: `POST /api/import/preview`/`commit` | `backend/src/routes/import.ts` |
 | — профиль продавца: `GET`/`PATCH /api/seller/me` | `backend/src/routes/seller.ts` |
 | — админка: модерация + справочник + фото моделей (`/api/admin/*`, `PATCH /models/:id`) | `backend/src/routes/admin.ts` |
-| **Схема БД** (PostgreSQL): Category(дерево), Brand, Model(+imageUrl каталожное фото), Listing, Seller, Conversation, Message, Deal, Review, Request(+Response) | `prisma/schema.prisma` |
+| **Схема БД** (PostgreSQL): Category(дерево), Brand, Model(+imageUrl), Listing, Seller, Conversation, Message, Deal, Review, Request(+Response), SearchLog | `prisma/schema.prisma` |
 | История миграций (init + catalog_revision) | `prisma/migrations/` |
 | Seed справочника (категории + бренды + модели, с алиасами) | `prisma/seed.ts` |
 | Анализ реального чата запросов (спрос, форматы) | `docs/research/vk_chat_analysis.md` |

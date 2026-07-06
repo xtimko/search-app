@@ -101,6 +101,11 @@ export async function searchRoutes(app: FastifyInstance) {
     let scoreByModel = new Map<number, number>()
     if (parsed.text.length >= 2) {
       scoreByModel = await matchModels(parsed.text)
+      // Лог спроса: запрос + топ-модель (или null, если не распознали). Не блокирует ответ.
+      const topModelId = [...scoreByModel.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
+      prisma.searchLog
+        .create({ data: { query: parsed.text.slice(0, 100), modelId: topModelId, city: city || null } })
+        .catch(() => {})
       if (scoreByModel.size === 0) return { parsed, results: [] } // текст задан, но совпадений нет
       and.push({ modelId: { in: [...scoreByModel.keys()] } })
     }

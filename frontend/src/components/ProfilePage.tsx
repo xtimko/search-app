@@ -21,7 +21,7 @@ function dealSize(l: DealFull['listing']): string {
 }
 
 // Раздел «Профиль»: VK-аккаунт + данные продавца + сделки + рейтинг и отзывы.
-export function ProfilePage({ auth, onLogout, onOpenChat }: { auth: AuthUser; onLogout: () => void; onOpenChat: (chatId: number) => void }) {
+export function ProfilePage({ auth, onLogout, onOpenChat, onOpenAnalytics }: { auth: AuthUser; onLogout: () => void; onOpenChat: (chatId: number) => void; onOpenAnalytics: () => void }) {
   const st = STATUS[auth.status]
   const [pub, setPub] = useState<SellerProfile | null>(null)
   const [deals, setDeals] = useState<DealFull[]>([])
@@ -59,6 +59,18 @@ export function ProfilePage({ auth, onLogout, onOpenChat }: { auth: AuthUser; on
       </div>
 
       <ProfileForm />
+
+      <div
+        className="card"
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, cursor: 'pointer', marginTop: 14 }}
+        onClick={onOpenAnalytics}
+      >
+        <div>
+          <div style={{ fontWeight: 700 }}>Аналитика спроса <span className="badge badge-accent">PRO</span></div>
+          <div className="text-2" style={{ fontSize: 13, marginTop: 2 }}>что искать и закупать — по данным площадки</div>
+        </div>
+        <span className="text-accent" style={{ fontSize: 20 }}>→</span>
+      </div>
 
       <div className="section-title">Мои сделки {deals.length > 0 && <span className="text-3" style={{ fontWeight: 400, fontSize: 13 }}>· {deals.length}</span>}</div>
       <div className="card">
