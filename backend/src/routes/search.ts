@@ -143,6 +143,7 @@ export async function searchRoutes(app: FastifyInstance) {
         model: {
           select: {
             name: true,
+            imageUrl: true,
             brand: { select: { name: true } },
             category: { select: { name: true, slug: true } },
           },

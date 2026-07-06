@@ -16,6 +16,7 @@ export interface Model {
   id: number
   name: string
   sku: string | null
+  imageUrl?: string | null
   brandId: number
   brand: { id: number; name: string }
   category: { id: number; name: string; slug: string }
@@ -55,6 +56,6 @@ export function fetchModels(q: string, brandId?: number): Promise<Model[]> {
 }
 
 // Добавить модель, которой нет в справочнике (бренд создаётся, если новый).
-export function createModel(input: { brandName: string; name: string; categoryId: number }): Promise<Model> {
+export function createModel(input: { brandName: string; name: string; categoryId: number; imageUrl?: string }): Promise<Model> {
   return postJson<Model>('/api/models', input)
 }

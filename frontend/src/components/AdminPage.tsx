@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Autocomplete } from './Autocomplete'
-import { fetchCategories, fetchBrands, type Brand, type Category } from '../api/directory'
-import { fetchSellers, setSellerStatus, addBrand, addModel, type AdminSeller } from '../api/admin'
+import { fetchCategories, fetchBrands, fetchModels, type Brand, type Category, type Model } from '../api/directory'
+import { fetchSellers, setSellerStatus, addBrand, addModel, setModelImage, type AdminSeller } from '../api/admin'
 
 const STATUS: Record<AdminSeller['status'], { text: string; cls: string }> = {
   pending: { text: 'на модерации', cls: 'text-2' },
@@ -21,8 +21,15 @@ export function AdminPage() {
   const [mName, setMName] = useState('')
   const [mAliases, setMAliases] = useState('')
   const [mSku, setMSku] = useState('')
+  const [mImage, setMImage] = useState('')
   const [dirMsg, setDirMsg] = useState('')
   const [resetKey, setResetKey] = useState(0)
+
+  // Куратор фото: выбор модели + ссылка.
+  const [photoModel, setPhotoModel] = useState<Model | null>(null)
+  const [photoUrl, setPhotoUrl] = useState('')
+  const [photoMsg, setPhotoMsg] = useState('')
+  const [photoKey, setPhotoKey] = useState(0)
 
   function loadSellers() {
     fetchSellers().then(setSellers).catch(() => setError('нет доступа к админке'))
@@ -58,16 +65,34 @@ export function AdminPage() {
       return
     }
     try {
-      await addModel({ brandId: mBrand.id, categoryId: mCategory, name: mName, aliases: csv(mAliases), sku: mSku || undefined })
+      await addModel({ brandId: mBrand.id, categoryId: mCategory, name: mName, aliases: csv(mAliases), sku: mSku || undefined, imageUrl: mImage || undefined })
       setDirMsg(`Модель добавлена: ${mBrand.name} ${mName}`)
       setMName('')
       setMAliases('')
       setMSku('')
+      setMImage('')
       setMBrand(null)
       setMCategory(0)
       setResetKey((k) => k + 1)
     } catch (e) {
       setDirMsg((e as Error).message)
+    }
+  }
+
+  async function saveModelPhoto() {
+    setPhotoMsg('')
+    if (!photoModel) {
+      setPhotoMsg('Выбери модель')
+      return
+    }
+    try {
+      await setModelImage(photoModel.id, photoUrl.trim())
+      setPhotoMsg(`Фото сохранено: ${photoModel.brand.name} ${photoModel.name}`)
+      setPhotoModel(null)
+      setPhotoUrl('')
+      setPhotoKey((k) => k + 1)
+    } catch (e) {
+      setPhotoMsg((e as Error).message)
     }
   }
 
@@ -151,10 +176,57 @@ export function AdminPage() {
           <input className="input" value={mAliases} onChange={(e) => setMAliases(e.target.value)} />
           <span className="label">Артикул (опц.)</span>
           <input className="input" value={mSku} onChange={(e) => setMSku(e.target.value)} />
+          <span className="label">Фото модели (ссылка, опц.)</span>
+          <input className="input" value={mImage} onChange={(e) => setMImage(e.target.value)} placeholder="https://…" />
           <button className="btn btn-primary btn-block" style={{ marginTop: 14 }} onClick={submitModel}>
             Добавить модель
           </button>
         </div>
+      </div>
+
+      <div className="section-title">Фото моделей</div>
+      <div className="hint" style={{ marginBottom: 8 }}>
+        Каталожное фото подставляется во все объявления модели, где продавец не приложил своё.
+      </div>
+      {photoMsg && (
+        <div className={photoMsg.includes('сохранено') ? 'text-success' : 'text-danger'} style={{ fontSize: 13, marginBottom: 8 }}>
+          {photoMsg}
+        </div>
+      )}
+      <div className="card" style={{ maxWidth: 460 }}>
+        <span className="label" style={{ marginTop: 0 }}>Модель</span>
+        <Autocomplete<Model>
+          key={`ph-${photoKey}`}
+          placeholder="начни вводить: samba, дж4…"
+          fetcher={(q) => fetchModels(q)}
+          getKey={(m) => m.id}
+          getLabel={(m) => `${m.brand.name} ${m.name}`}
+          renderItem={(m) => (
+            <span>
+              {m.brand.name} {m.name} <span className="text-3" style={{ fontSize: 12 }}>· {m.category.name}{m.imageUrl ? ' · есть фото' : ''}</span>
+            </span>
+          )}
+          onSelect={(m) => {
+            setPhotoModel(m)
+            setPhotoUrl(m.imageUrl ?? '')
+          }}
+        />
+        {photoModel && (
+          <>
+            <span className="label">Ссылка на фото (пусто — убрать)</span>
+            <input className="input" value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder="https://…" />
+            {photoUrl.trim() && (
+              <img
+                src={photoUrl.trim()}
+                alt="превью"
+                style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border)', marginTop: 8 }}
+              />
+            )}
+            <button className="btn btn-primary btn-block" style={{ marginTop: 12 }} onClick={saveModelPhoto}>
+              Сохранить фото для «{photoModel.brand.name} {photoModel.name}»
+            </button>
+          </>
+        )}
       </div>
     </div>
   )

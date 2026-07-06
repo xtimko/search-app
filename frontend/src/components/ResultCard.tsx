@@ -12,12 +12,15 @@ function sizeLabel(r: SearchResult): string {
 // Карточка товара в выдаче (поиск, главная). Клик по продавцу — его мини-профиль.
 export function ResultCard({ r, compact, onContact }: { r: SearchResult; compact?: boolean; onContact?: (r: SearchResult) => void }) {
   const [showSeller, setShowSeller] = useState(false)
+  const [imgOk, setImgOk] = useState(true)
+  // фото объявления приоритетнее, иначе — каталожное фото модели
+  const img = r.photo || r.model.imageUrl
 
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', gap: 12 }}>
-        {r.photo ? (
-          <img src={r.photo} alt="" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
+        {img && imgOk ? (
+          <img src={img} alt="" onError={() => setImgOk(false)} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
         ) : (
           <div style={{ width: 64, height: 64, borderRadius: 8, background: 'var(--bg-elev)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontSize: 20, fontWeight: 700 }}>
             {r.model.brand.name.slice(0, 1)}

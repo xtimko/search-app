@@ -60,7 +60,7 @@ export async function adminRoutes(app: FastifyInstance) {
 
   // POST /api/admin/models — добавить модель в справочник.
   app.post('/api/admin/models', async (req, reply) => {
-    const b = (req.body ?? {}) as { brandId?: number; categoryId?: number; name?: string; aliases?: string[]; sku?: string }
+    const b = (req.body ?? {}) as { brandId?: number; categoryId?: number; name?: string; aliases?: string[]; sku?: string; imageUrl?: string }
     if (!b.name?.trim() || !b.brandId || !b.categoryId) {
       return reply.code(400).send({ error: 'name, brandId, categoryId обязательны' })
     }
@@ -72,11 +72,25 @@ export async function adminRoutes(app: FastifyInstance) {
           name: b.name.trim(),
           aliases: (b.aliases || []).map((a) => a.toLowerCase().trim()).filter(Boolean),
           sku: b.sku?.trim() || null,
+          imageUrl: b.imageUrl?.trim() || null,
         },
       })
       return reply.code(201).send(model)
     } catch {
       return reply.code(409).send({ error: 'такая модель у бренда уже есть' })
     }
+  })
+
+  // PATCH /api/admin/models/:id — задать/сменить каталожное фото модели (куратор).
+  app.patch<{ Params: { id: string } }>('/api/admin/models/:id', async (req, reply) => {
+    const id = Number(req.params.id)
+    const imageUrl = String((req.body as { imageUrl?: string })?.imageUrl ?? '').trim().slice(0, 500) || null
+    const model = await prisma.model.findUnique({ where: { id }, select: { id: true } })
+    if (!model) return reply.code(404).send({ error: 'модель не найдена' })
+    return prisma.model.update({
+      where: { id },
+      data: { imageUrl },
+      select: { id: true, name: true, imageUrl: true, brand: { select: { name: true } } },
+    })
   })
 }

@@ -83,8 +83,8 @@
 | — поиск покупателя: `GET /api/search` (парсер строки + нечёткий поиск pg_trgm + ранжирование + фильтры) | `backend/src/routes/search.ts` |
 | — массовый импорт: `POST /api/import/preview`/`commit` | `backend/src/routes/import.ts` |
 | — профиль продавца: `GET`/`PATCH /api/seller/me` | `backend/src/routes/seller.ts` |
-| — админка: модерация продавцов + справочник (`/api/admin/*`) | `backend/src/routes/admin.ts` |
-| **Схема БД** (PostgreSQL): Category(дерево), Brand, Model, Listing, Seller, Conversation, Message, Deal, Review, Request(+Response) | `prisma/schema.prisma` |
+| — админка: модерация + справочник + фото моделей (`/api/admin/*`, `PATCH /models/:id`) | `backend/src/routes/admin.ts` |
+| **Схема БД** (PostgreSQL): Category(дерево), Brand, Model(+imageUrl каталожное фото), Listing, Seller, Conversation, Message, Deal, Review, Request(+Response) | `prisma/schema.prisma` |
 | История миграций (init + catalog_revision) | `prisma/migrations/` |
 | Seed справочника (категории + бренды + модели, с алиасами) | `prisma/seed.ts` |
 | Анализ реального чата запросов (спрос, форматы) | `docs/research/vk_chat_analysis.md` |

@@ -45,6 +45,20 @@ export function addBrand(name: string, aliases: string[]) {
   return postAdmin('/api/admin/brands', { name, aliases })
 }
 
-export function addModel(payload: { brandId: number; categoryId: number; name: string; aliases: string[]; sku?: string }) {
+export function addModel(payload: { brandId: number; categoryId: number; name: string; aliases: string[]; sku?: string; imageUrl?: string }) {
   return postAdmin('/api/admin/models', payload)
+}
+
+// Задать/сменить каталожное фото модели (куратор). imageUrl='' — убрать фото.
+export async function setModelImage(id: number, imageUrl: string) {
+  const res = await fetch(`/api/admin/models/${id}`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ imageUrl }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error || `HTTP ${res.status}`)
+  }
+  return res.json()
 }

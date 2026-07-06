@@ -12,7 +12,7 @@ export interface SearchResult {
   price: number
   city: string | null
   photo: string | null
-  model: { name: string; brand: { name: string }; category: { name: string; slug: string } }
+  model: { name: string; imageUrl: string | null; brand: { name: string }; category: { name: string; slug: string } }
   seller: {
     id: number
     nick: string

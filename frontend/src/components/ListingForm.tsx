@@ -28,6 +28,7 @@ export function ListingForm({ onCreated }: { onCreated: () => void }) {
   const [newBrand, setNewBrand] = useState('')
   const [newModelName, setNewModelName] = useState('')
   const [newCategoryId, setNewCategoryId] = useState<number | ''>('')
+  const [newImageUrl, setNewImageUrl] = useState('')
   const [creating, setCreating] = useState(false)
 
   useEffect(() => {
@@ -49,13 +50,14 @@ export function ListingForm({ onCreated }: { onCreated: () => void }) {
     if (!newCategoryId) return setError('Выберите категорию')
     setCreating(true)
     try {
-      const m = await createModel({ brandName: newBrand.trim(), name: newModelName.trim(), categoryId: Number(newCategoryId) })
+      const m = await createModel({ brandName: newBrand.trim(), name: newModelName.trim(), categoryId: Number(newCategoryId), imageUrl: newImageUrl.trim() || undefined })
       setModel(m)
       setBrand(m.brand as Brand)
       setShowNewModel(false)
       setNewBrand('')
       setNewModelName('')
       setNewCategoryId('')
+      setNewImageUrl('')
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -160,6 +162,9 @@ export function ListingForm({ onCreated }: { onCreated: () => void }) {
                   </option>
                 ))}
               </select>
+              <span className="label">Фото модели (ссылка, необязательно)</span>
+              <input className="input" value={newImageUrl} onChange={(e) => setNewImageUrl(e.target.value)} placeholder="https://…" />
+              <div className="hint" style={{ marginTop: 4 }}>Каталожное фото подставится во все объявления этой модели.</div>
               <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                 <button className="btn btn-primary btn-sm" disabled={creating} onClick={createNewModel}>
                   {creating ? 'Создаю…' : 'Создать и выбрать'}

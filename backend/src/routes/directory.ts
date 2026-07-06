@@ -33,9 +33,10 @@ export async function directoryRoutes(app: FastifyInstance) {
     const me = await getCurrentSellerId(req)
     if (!me) return reply.code(401).send({ error: 'нужен вход' })
 
-    const b = (req.body ?? {}) as { brandName?: string; name?: string; categoryId?: number }
+    const b = (req.body ?? {}) as { brandName?: string; name?: string; categoryId?: number; imageUrl?: string }
     const brandName = String(b.brandName ?? '').trim().slice(0, 40)
     const name = String(b.name ?? '').trim().slice(0, 60)
+    const imageUrl = String(b.imageUrl ?? '').trim().slice(0, 500) || null
     const categoryId = Number(b.categoryId)
     if (brandName.length < 2) return reply.code(400).send({ error: 'укажи бренд (мин. 2 символа)' })
     if (name.length < 2) return reply.code(400).send({ error: 'укажи название модели (мин. 2 символа)' })
@@ -50,6 +51,7 @@ export async function directoryRoutes(app: FastifyInstance) {
       id: true,
       name: true,
       sku: true,
+      imageUrl: true,
       brandId: true,
       brand: { select: { id: true, name: true } },
       category: { select: { id: true, name: true, slug: true } },
@@ -58,8 +60,12 @@ export async function directoryRoutes(app: FastifyInstance) {
       where: { brandId: brand.id, name: { equals: name, mode: 'insensitive' } },
       select,
     })
-    if (existing) return existing
-    return reply.code(201).send(await prisma.model.create({ data: { brandId: brand.id, categoryId, name }, select }))
+    // если модель уже есть, но без фото — проставим переданное
+    if (existing) {
+      if (imageUrl && !existing.imageUrl) return prisma.model.update({ where: { id: existing.id }, data: { imageUrl }, select })
+      return existing
+    }
+    return reply.code(201).send(await prisma.model.create({ data: { brandId: brand.id, categoryId, name, imageUrl }, select }))
   })
 
   // GET /api/models?q=&brandId=&categoryId= — модели по названию/алиасу/артикулу,
