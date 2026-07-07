@@ -37,7 +37,7 @@
 | Сниппет nginx (поддомен → контейнер :8080) | `deploy/nginx-stockpoisk.conf` |
 | **Фронтенд** (Vite + React + TS) | `frontend/` |
 | — точка входа React | `frontend/src/main.tsx` |
-| — дизайн-система (тёмный street: токены + классы btn/chip/card/input) | `frontend/src/styles/theme.css` |
+| — дизайн-система (Modern Dark: Anton+Epilogue, токены/элевация/стекло, классы btn/chip/card/input) | `frontend/src/styles/theme.css` |
 | — оболочка: топбар (десктоп) + нижний таб-бар (мобайл), вкладки | `frontend/src/App.tsx` |
 | — главная: hero-поиск, категории, горячие предложения, тизер запросов | `frontend/src/components/HomePage.tsx` |
 | — карточка товара в выдаче (поиск + главная) | `frontend/src/components/ResultCard.tsx` |

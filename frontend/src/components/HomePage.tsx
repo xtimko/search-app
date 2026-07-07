@@ -42,12 +42,13 @@ export function HomePage({
 
   return (
     <div>
-      <section style={{ textAlign: 'center', padding: '48px 8px 8px' }}>
-        <h1 style={{ fontSize: 30, fontWeight: 800, margin: 0, lineHeight: 1.25 }}>
-          Найди пару. <span className="text-accent">Или продай свою.</span>
+      <section className="fade-up" style={{ textAlign: 'center', padding: '52px 8px 8px' }}>
+        <h1 className="display" style={{ fontSize: 'clamp(34px, 6vw, 58px)', margin: 0 }}>
+          Найди пару.<br />
+          <span className="text-accent">Или продай свою.</span>
         </h1>
-        <p className="text-2" style={{ margin: '10px 0 22px', fontSize: 15 }}>
-          Весь сток реселлеров в одном поиске — вместо чатов
+        <p className="text-2" style={{ margin: '14px auto 24px', fontSize: 16, maxWidth: 440 }}>
+          Весь сток реселлеров в одном поиске — вместо сотен чатов
         </p>
         <div style={{ display: 'flex', gap: 8, maxWidth: 560, margin: '0 auto' }}>
           <input

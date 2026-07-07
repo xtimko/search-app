@@ -17,7 +17,7 @@ export function ResultCard({ r, compact, onContact }: { r: SearchResult; compact
   const img = r.photo || r.model.imageUrl
 
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div className="card card-hover" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', gap: 12 }}>
         {img && imgOk ? (
           <img src={img} alt="" onError={() => setImgOk(false)} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />

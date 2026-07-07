@@ -152,9 +152,9 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <header style={{ borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, background: 'var(--bg)', zIndex: 50 }}>
-        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 16, height: 56 }}>
-          <div style={{ fontSize: 17, fontWeight: 800, letterSpacing: 0.5, cursor: 'pointer', flexShrink: 0 }} onClick={() => setTab('home')}>
+      <header style={{ borderBottom: '1px solid var(--glass-brd)', position: 'sticky', top: 0, background: 'var(--glass-bg)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', zIndex: 50 }}>
+        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 16, height: 58 }}>
+          <div className="display" style={{ fontSize: 23, cursor: 'pointer', flexShrink: 0 }} onClick={() => setTab('home')}>
             <span style={{ color: 'var(--accent)' }}>SEARCH</span>
             <span>APP</span>
           </div>
@@ -227,8 +227,10 @@ export default function App() {
             bottom: 0,
             left: 0,
             right: 0,
-            background: 'var(--bg-card)',
-            borderTop: '1px solid var(--border)',
+            background: 'var(--glass-bg)',
+            backdropFilter: 'blur(14px)',
+            WebkitBackdropFilter: 'blur(14px)',
+            borderTop: '1px solid var(--glass-brd)',
             display: 'grid',
             gridTemplateColumns: `repeat(${MOBILE_TABS.length}, 1fr)`,
             zIndex: 60,
