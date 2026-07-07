@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { HomePage } from './components/HomePage'
 import { SearchPage } from './components/SearchPage'
 import { SellerPage } from './components/SellerPage'
@@ -94,6 +94,27 @@ export default function App() {
   const [auth, setAuth] = useState<AuthUser | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
   const [unread, setUnread] = useState(0)
+
+  // Плавающая активная пилюля нижнего таб-бара: замеряем активную кнопку и
+  // анимированно переезжаем к ней. null — если активной вкладки нет в баре.
+  const bottomNavRef = useRef<HTMLElement>(null)
+  const [pill, setPill] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
+  const recalcPill = useCallback(() => {
+    const nav = bottomNavRef.current
+    if (isDesktop || !nav) return setPill(null)
+    const idx = MOBILE_TABS.findIndex((t) => t.id === tab)
+    if (idx < 0) return setPill(null)
+    const btn = nav.querySelectorAll('button')[idx] as HTMLElement | undefined
+    if (!btn) return
+    const nr = nav.getBoundingClientRect()
+    const br = btn.getBoundingClientRect()
+    setPill({ x: br.left - nr.left - nav.clientLeft, y: br.top - nr.top - nav.clientTop, w: br.width, h: br.height })
+  }, [tab, isDesktop])
+  useLayoutEffect(() => { recalcPill() }, [recalcPill])
+  useEffect(() => {
+    window.addEventListener('resize', recalcPill)
+    return () => window.removeEventListener('resize', recalcPill)
+  }, [recalcPill])
 
   useEffect(() => {
     fetchAuthMe()
@@ -222,6 +243,7 @@ export default function App() {
 
       {!isDesktop && (
         <nav
+          ref={bottomNavRef}
           style={{
             position: 'fixed',
             bottom: 'calc(env(safe-area-inset-bottom, 0px) + 14px)',
@@ -241,6 +263,24 @@ export default function App() {
             zIndex: 60,
           }}
         >
+          {pill && (
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                width: pill.w,
+                height: pill.h,
+                transform: `translate(${pill.x}px, ${pill.y}px)`,
+                background: 'var(--accent-dim)',
+                borderRadius: 17,
+                transition: 'transform 0.34s var(--ease), width 0.34s var(--ease)',
+                pointerEvents: 'none',
+                zIndex: 0,
+              }}
+            />
+          )}
           {MOBILE_TABS.map((t) => {
             const active = tab === t.id
             return (
@@ -250,10 +290,10 @@ export default function App() {
                 aria-label={t.label}
                 aria-current={active ? 'page' : undefined}
                 style={{
-                  background: active ? 'var(--accent-dim)' : 'transparent',
+                  background: 'transparent',
                   border: 'none',
                   borderRadius: 17,
-                  padding: '8px 0 7px',
+                  padding: '10px 0 8px',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -261,8 +301,9 @@ export default function App() {
                   cursor: 'pointer',
                   color: active ? 'var(--accent)' : 'var(--text-3)',
                   position: 'relative',
+                  zIndex: 1,
                   fontFamily: 'inherit',
-                  transition: 'background 0.18s var(--ease), color 0.18s var(--ease)',
+                  transition: 'color 0.2s var(--ease)',
                 }}
               >
                 <TabIcon tab={t.id} />
