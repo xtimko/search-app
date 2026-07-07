@@ -198,7 +198,7 @@ export default function App() {
         </div>
       </header>
 
-      <main style={{ maxWidth: 1080, margin: '0 auto', padding: `0 16px ${isDesktop ? 48 : 84}px`, width: '100%', flex: 1 }}>
+      <main style={{ maxWidth: 1080, margin: '0 auto', padding: `0 16px ${isDesktop ? 48 : 108}px`, width: '100%', flex: 1 }}>
         {tab === 'home' && <HomePage onSearch={goSearch} onContact={contactSeller} onGoRequests={() => setTab('requests')} />}
         {tab === 'search' && (
           <SearchPage key={searchInit.seed} initialQ={searchInit.q} initialCategorySlug={searchInit.categorySlug} onContact={contactSeller} />
@@ -224,17 +224,21 @@ export default function App() {
         <nav
           style={{
             position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
+            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 14px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 'min(430px, calc(100% - 24px))',
             background: 'var(--glass-bg)',
-            backdropFilter: 'blur(14px)',
-            WebkitBackdropFilter: 'blur(14px)',
-            borderTop: '1px solid var(--glass-brd)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid var(--border-strong)',
+            borderRadius: 24,
+            boxShadow: 'var(--shadow-3)',
             display: 'grid',
             gridTemplateColumns: `repeat(${MOBILE_TABS.length}, 1fr)`,
+            padding: 7,
+            gap: 2,
             zIndex: 60,
-            paddingBottom: 'env(safe-area-inset-bottom)',
           }}
         >
           {MOBILE_TABS.map((t) => {
@@ -243,9 +247,12 @@ export default function App() {
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
+                aria-label={t.label}
+                aria-current={active ? 'page' : undefined}
                 style={{
-                  background: 'none',
+                  background: active ? 'var(--accent-dim)' : 'transparent',
                   border: 'none',
+                  borderRadius: 17,
                   padding: '8px 0 7px',
                   display: 'flex',
                   flexDirection: 'column',
@@ -255,12 +262,13 @@ export default function App() {
                   color: active ? 'var(--accent)' : 'var(--text-3)',
                   position: 'relative',
                   fontFamily: 'inherit',
+                  transition: 'background 0.18s var(--ease), color 0.18s var(--ease)',
                 }}
               >
                 <TabIcon tab={t.id} />
-                <span style={{ fontSize: 10, fontWeight: active ? 700 : 500 }}>{t.label}</span>
+                <span style={{ fontSize: 10.5, fontWeight: active ? 700 : 500 }}>{t.label}</span>
                 {t.id === 'chats' && unread > 0 && (
-                  <span style={{ position: 'absolute', top: 4, right: '50%', marginRight: -20, background: 'var(--accent)', color: 'var(--on-accent)', fontSize: 10, fontWeight: 700, borderRadius: 8, padding: '0 5px' }}>
+                  <span style={{ position: 'absolute', top: 3, left: 'calc(50% + 7px)', background: 'var(--accent)', color: 'var(--on-accent)', fontSize: 10, fontWeight: 700, borderRadius: 9, padding: '0 5px', lineHeight: '15px' }}>
                     {unread}
                   </span>
                 )}
