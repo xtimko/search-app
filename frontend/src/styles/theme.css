@@ -37,8 +37,10 @@
   --shadow-2: 0 6px 20px rgba(0, 0, 0, 0.45);
   --shadow-3: 0 14px 40px rgba(0, 0, 0, 0.55);
 
-  --font-display: 'Anton', 'Epilogue', system-ui, sans-serif;
-  --font: 'Epilogue', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Дисплей — Oswald (condensed, street; поддерживает кириллицу).
+     Текст — Inter (полная кириллица). */
+  --font-display: 'Oswald', 'Inter', system-ui, sans-serif;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -74,13 +76,23 @@ a { color: var(--accent); text-decoration: none; }
 
 h1, h2, h3 { letter-spacing: -0.01em; }
 
-/* Дисплейный шрифт для крупных заголовков/лого */
+/* Дисплейный шрифт для крупных заголовков/лого (Oswald) */
 .display {
   font-family: var(--font-display);
-  font-weight: 400;
-  letter-spacing: 0.01em;
-  line-height: 1.02;
+  font-weight: 700;
+  letter-spacing: 0.005em;
+  line-height: 1.04;
   text-transform: uppercase;
+}
+
+/* Единый заголовок страницы/раздела (Oswald, без капса, крупный) */
+.page-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 26px;
+  letter-spacing: 0.005em;
+  line-height: 1.15;
+  margin: 0;
 }
 
 /* Табличные цифры — цены, метрики без «прыжков» */
@@ -202,7 +214,7 @@ h1, h2, h3 { letter-spacing: -0.01em; }
 .size-chip-sold:hover { border-color: var(--border-strong); }
 
 /* Секции */
-.section-title { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; margin: 28px 0 14px; }
+.section-title { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 19px; font-weight: 600; letter-spacing: 0.005em; margin: 28px 0 14px; }
 .badge { font-size: 11px; padding: 3px 9px; border-radius: 20px; border: 1px solid var(--border-strong); color: var(--text-3); font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; }
 .badge-accent { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
 

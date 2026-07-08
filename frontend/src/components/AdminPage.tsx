@@ -98,7 +98,7 @@ export function AdminPage() {
 
   return (
     <div style={{ paddingTop: 20 }}>
-      <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Админ</h1>
+      <h1 className="page-title">Админ</h1>
       {error && <div className="text-danger" style={{ fontSize: 13, marginTop: 8 }}>{error}</div>}
 
       <div className="section-title">Продавцы ({sellers.length})</div>

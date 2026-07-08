@@ -74,7 +74,7 @@ export function SellerPage() {
     <div style={{ paddingTop: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Мой сток</h1>
+          <h1 className="page-title">Мой сток</h1>
           {items.length > 0 && (
             <div className="text-3" style={{ fontSize: 13, marginTop: 2 }}>
               {groups.length} товаров · {items.length} позиций · в наличии {inStock}

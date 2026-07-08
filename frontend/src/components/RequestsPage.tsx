@@ -157,7 +157,7 @@ export function RequestsPage({ meId, onOpenChat, onNeedAuth }: { meId: number | 
     <div style={{ paddingTop: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Запросы «Ищу»</h1>
+          <h1 className="page-title">Запросы «Ищу»</h1>
           <div className="text-3" style={{ fontSize: 13, marginTop: 2 }}>
             покупатели ищут — продавцы предлагают цену
           </div>

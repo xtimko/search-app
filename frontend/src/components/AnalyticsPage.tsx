@@ -56,8 +56,8 @@ export function AnalyticsPage() {
     <div style={{ paddingTop: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>
-            Аналитика спроса <span className="badge badge-accent">PRO</span>
+          <h1 className="page-title">
+            Аналитика спроса <span className="badge badge-accent" style={{ verticalAlign: 'middle' }}>PRO</span>
           </h1>
           <div className="text-3" style={{ fontSize: 13, marginTop: 2 }}>
             что искать и закупать — по реальным данным площадки
