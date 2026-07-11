@@ -175,9 +175,9 @@ export default function App() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <header style={{ borderBottom: '1px solid var(--glass-brd)', position: 'sticky', top: 0, background: 'var(--glass-bg)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', zIndex: 50 }}>
         <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 16, height: 58 }}>
-          <div className="display" style={{ fontSize: 23, cursor: 'pointer', flexShrink: 0 }} onClick={() => setTab('home')}>
-            <span style={{ color: 'var(--accent)' }}>SEARCH</span>
-            <span>APP</span>
+          <div className="display" style={{ fontSize: 15, cursor: 'pointer', flexShrink: 0, letterSpacing: '0.02em' }} onClick={() => setTab('home')}>
+            <span>SEARCH</span>
+            <span style={{ color: 'var(--text-3)' }}>APP</span>
           </div>
           {isDesktop && (
             <nav style={{ display: 'flex', gap: 4, overflowX: 'auto', flex: 1 }}>

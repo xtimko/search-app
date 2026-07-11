@@ -1,24 +1,26 @@
-/* Дизайн-система Search-app — тёмный street/resale (Modern Dark).
-   Дисплей — Anton, текст — Epilogue. Акцент — фирменный лайм. */
+/* Дизайн-система Search-app — Ice Monochrome (люкс-минимализм, ночной).
+   Дисплей — Unbounded, текст — Onest (оба с кириллицей).
+   Акцент — белый: цвет почти не используется, работает свет и контраст. */
 :root {
-  /* Поверхности: глубокий тёмный с элевацией (не чистый чёрный — без OLED-смаза) */
-  --bg: #0e0e11;
-  --bg-1: #131318;
-  --bg-card: #17171d;
-  --bg-elev: #1f1f27;
-  --bg-input: #131318;
-  --border: #24242c;
-  --border-strong: #33333d;
+  /* Поверхности: глубокий графит с элевацией (не чистый чёрный — без OLED-смаза) */
+  --bg: #0a0a0c;
+  --bg-1: #101013;
+  --bg-card: #141418;
+  --bg-elev: #1c1c22;
+  --bg-input: #111114;
+  --border: #222228;
+  --border-strong: #32323a;
 
-  --text: #f4f4f5;
-  --text-2: #a1a1ab;
-  --text-3: #6b6b75;
+  --text: #ececef;
+  --text-2: #9c9ca6;
+  --text-3: #63636d;
 
-  --accent: #a3e635;
-  --accent-hover: #b8f04f;
-  --accent-dim: rgba(163, 230, 53, 0.12);
-  --accent-glow: rgba(163, 230, 53, 0.28);
-  --on-accent: #16240a;
+  /* Ice: акцент — белый, «серебряное» свечение */
+  --accent: #ffffff;
+  --accent-hover: #e9e9ee;
+  --accent-dim: rgba(255, 255, 255, 0.09);
+  --accent-glow: rgba(255, 255, 255, 0.22);
+  --on-accent: #0b0b0d;
 
   --vk: #2787f5;
   --danger: #ff6b5e;
@@ -26,8 +28,8 @@
   --warn: #fbbf24;
 
   /* Стекло для липких панелей */
-  --glass-bg: rgba(14, 14, 17, 0.72);
-  --glass-brd: rgba(255, 255, 255, 0.06);
+  --glass-bg: rgba(10, 10, 12, 0.72);
+  --glass-brd: rgba(255, 255, 255, 0.07);
 
   --radius-sm: 8px;
   --radius: 11px;
@@ -37,10 +39,8 @@
   --shadow-2: 0 6px 20px rgba(0, 0, 0, 0.45);
   --shadow-3: 0 14px 40px rgba(0, 0, 0, 0.55);
 
-  /* Дисплей — Oswald (condensed, street; поддерживает кириллицу).
-     Текст — Inter (полная кириллица). */
-  --font-display: 'Oswald', 'Inter', system-ui, sans-serif;
-  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Unbounded', 'Onest', system-ui, sans-serif;
+  --font: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -59,7 +59,7 @@ html, body {
   text-rendering: optimizeLegibility;
 }
 
-/* Тонкое атмосферное свечение вверху фона (кинематографичность) */
+/* Тонкое серебристое свечение вверху фона (кинематографичность) */
 body::before {
   content: '';
   position: fixed;
@@ -67,8 +67,8 @@ body::before {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(60rem 32rem at 78% -8%, rgba(163, 230, 53, 0.05), transparent 60%),
-    radial-gradient(48rem 30rem at 8% 0%, rgba(39, 135, 245, 0.04), transparent 55%);
+    radial-gradient(64rem 34rem at 50% -12%, rgba(255, 255, 255, 0.05), transparent 60%),
+    radial-gradient(40rem 26rem at 12% 4%, rgba(154, 168, 196, 0.035), transparent 55%);
 }
 #root { position: relative; z-index: 1; }
 
@@ -76,24 +76,60 @@ a { color: var(--accent); text-decoration: none; }
 
 h1, h2, h3 { letter-spacing: -0.01em; }
 
-/* Дисплейный шрифт для крупных заголовков/лого (Oswald) */
+/* Дисплейный шрифт для крупных заголовков/лого (Unbounded — широкий, без капса) */
 .display {
   font-family: var(--font-display);
   font-weight: 700;
-  letter-spacing: 0.005em;
-  line-height: 1.04;
-  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  line-height: 1.12;
 }
 
-/* Единый заголовок страницы/раздела (Oswald, без капса, крупный) */
+/* Единый заголовок страницы/раздела (Unbounded, компактный) */
 .page-title {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 26px;
-  letter-spacing: 0.005em;
-  line-height: 1.15;
+  font-size: 21px;
+  letter-spacing: -0.005em;
+  line-height: 1.2;
   margin: 0;
 }
+
+/* Поиск-герой: большая пилюля с двойным кольцом и мягким свечением на фокусе
+   (референс — unlumen favicon-search) */
+.search-hero {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 6px 6px 18px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.03), var(--shadow-2);
+  transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease);
+}
+.search-hero:focus-within {
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 0 0 4px rgba(255, 255, 255, 0.06),
+    0 0 28px rgba(255, 255, 255, 0.12),
+    0 10px 42px rgba(0, 0, 0, 0.6);
+}
+.search-hero input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 16px;
+  padding: 10px 0;
+}
+.search-hero input::placeholder { color: var(--text-3); }
+.search-hero .search-ico { color: var(--text-3); flex-shrink: 0; display: flex; }
+.search-hero:focus-within .search-ico { color: var(--text-2); }
+.search-hero button { border-radius: 999px; }
 
 /* Табличные цифры — цены, метрики без «прыжков» */
 .tnum, .text-accent { font-variant-numeric: tabular-nums; }
@@ -214,7 +250,7 @@ h1, h2, h3 { letter-spacing: -0.01em; }
 .size-chip-sold:hover { border-color: var(--border-strong); }
 
 /* Секции */
-.section-title { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 19px; font-weight: 600; letter-spacing: 0.005em; margin: 28px 0 14px; }
+.section-title { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 16px; font-weight: 600; letter-spacing: -0.005em; margin: 28px 0 14px; }
 .badge { font-size: 11px; padding: 3px 9px; border-radius: 20px; border: 1px solid var(--border-strong); color: var(--text-3); font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; }
 .badge-accent { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
 

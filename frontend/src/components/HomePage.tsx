@@ -42,28 +42,43 @@ export function HomePage({
 
   return (
     <div>
-      <section className="fade-up" style={{ textAlign: 'center', padding: '52px 8px 8px' }}>
-        <h1 className="display" style={{ fontSize: 'clamp(34px, 6vw, 58px)', margin: 0 }}>
-          Найди пару.<br />
-          <span className="text-accent">Или продай свою.</span>
+      <section className="fade-up" style={{ textAlign: 'center', padding: '46px 8px 8px' }}>
+        <h1 className="display" style={{ fontSize: 'clamp(20px, 3.4vw, 30px)', margin: 0 }}>
+          Найди пару. <span className="text-3">Или продай свою.</span>
         </h1>
-        <p className="text-2" style={{ margin: '14px auto 24px', fontSize: 16, maxWidth: 440 }}>
+        <p className="text-2" style={{ margin: '10px auto 26px', fontSize: 15, maxWidth: 430 }}>
           Весь сток реселлеров в одном поиске — вместо сотен чатов
         </p>
-        <div style={{ display: 'flex', gap: 8, maxWidth: 560, margin: '0 auto' }}>
+
+        <div className="search-hero" style={{ maxWidth: 620, margin: '0 auto' }}>
+          <span className="search-ico" aria-hidden>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <circle cx="11" cy="11" r="7" />
+              <path d="M20 20l-4.2-4.2" />
+            </svg>
+          </span>
           <input
-            className="input"
-            style={{ flex: 1 }}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && onSearch(q.trim() || undefined)}
             placeholder="Jordan 4 42, nb 2002r, birkin…"
+            aria-label="Поиск по стоку"
           />
           <button className="btn btn-primary" onClick={() => onSearch(q.trim() || undefined)}>
             Найти
           </button>
         </div>
+
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 16 }}>
+          <span className="text-3" style={{ fontSize: 12, alignSelf: 'center' }}>популярное:</span>
+          {['jordan 4', 'samba', '2002r', 'dunk low'].map((p) => (
+            <button key={p} className="chip" style={{ minHeight: 30, padding: '4px 12px' }} onClick={() => onSearch(p)}>
+              {p}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 20 }}>
           {categories.map((c) => (
             <button key={c.id} className="chip" onClick={() => onSearch(undefined, c.slug)}>
               {c.name}
