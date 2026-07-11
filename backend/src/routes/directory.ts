@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../db'
 import { getCurrentSellerId } from './listings'
+import { reattributeSearchLogs } from '../demand'
 
 // Эндпоинты единого справочника: категории, бренды, модели (для автоподстановки).
 // Поиск по названию, алиасам и артикулу; без учёта регистра; не более 20 результатов.
@@ -65,7 +66,10 @@ export async function directoryRoutes(app: FastifyInstance) {
       if (imageUrl && !existing.imageUrl) return prisma.model.update({ where: { id: existing.id }, data: { imageUrl }, select })
       return existing
     }
-    return reply.code(201).send(await prisma.model.create({ data: { brandId: brand.id, categoryId, name, imageUrl }, select }))
+    const created = await prisma.model.create({ data: { brandId: brand.id, categoryId, name, imageUrl }, select })
+    // Пере-матчим недавние «не нашли»-поиски на новую модель (не блокируем ответ).
+    reattributeSearchLogs(created.id).catch(() => {})
+    return reply.code(201).send(created)
   })
 
   // GET /api/models?q=&brandId=&categoryId= — модели по названию/алиасу/артикулу,

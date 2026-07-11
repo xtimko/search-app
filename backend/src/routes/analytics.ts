@@ -5,6 +5,34 @@ import { getCurrentSellerId } from './listings'
 // Аналитика спроса (PRO). Считается из first-party данных площадки:
 // запросы «Ищу», логи поиска, сделки, сток. Окно — неделя/месяц.
 
+// Биграммный коэффициент Дайса — похожесть строк для склейки опечаток
+// в «ищут, но не нашли» («туфли челси» ≈ «туфли чилси»).
+function bigrams(s: string): Set<string> {
+  const t = ` ${s.toLowerCase().replace(/\s+/g, ' ').trim()} `
+  const out = new Set<string>()
+  for (let i = 0; i < t.length - 1; i++) out.add(t.slice(i, i + 2))
+  return out
+}
+function dice(a: string, b: string): number {
+  const A = bigrams(a)
+  const B = bigrams(b)
+  if (A.size === 0 || B.size === 0) return 0
+  let inter = 0
+  for (const x of A) if (B.has(x)) inter++
+  return (2 * inter) / (A.size + B.size)
+}
+
+// Жадная кластеризация: похожие запросы сливаются, каноном становится самый частый.
+function clusterQueries(rows: { query: string; count: number }[], limit: number) {
+  const clusters: { query: string; count: number }[] = []
+  for (const r of [...rows].sort((a, b) => b.count - a.count)) {
+    const hit = clusters.find((c) => dice(c.query, r.query) >= 0.55)
+    if (hit) hit.count += r.count
+    else clusters.push({ query: r.query, count: r.count })
+  }
+  return clusters.sort((a, b) => b.count - a.count).slice(0, limit)
+}
+
 async function modelLabels(ids: number[]): Promise<Map<number, { name: string; brand: string; category: string }>> {
   if (ids.length === 0) return new Map()
   const models = await prisma.model.findMany({
@@ -28,13 +56,14 @@ export async function analyticsRoutes(app: FastifyInstance) {
       prisma.request.groupBy({ by: ['modelId'], where: { createdAt: { gte: since } }, _count: true }),
       // спрос: поиски, где распознали модель
       prisma.searchLog.groupBy({ by: ['modelId'], where: { createdAt: { gte: since }, modelId: { not: null } }, _count: true }),
-      // «ищут, но не нашли» — запросы без совпадения (пробелы каталога/спрос вне ассортимента)
+      // «ищут, но не нашли» — запросы без совпадения (пробелы каталога/спрос вне ассортимента);
+      // берём с запасом, ниже склеиваем варианты с опечатками
       prisma.searchLog.groupBy({
         by: ['query'],
         where: { createdAt: { gte: since }, modelId: null },
         _count: true,
         orderBy: { _count: { query: 'desc' } },
-        take: 12,
+        take: 60,
       }),
       // продажи: завершённые сделки по моделям (+ средняя цена)
       prisma.deal.groupBy({ by: ['listingId'], where: { status: 'completed', closedAt: { gte: since } }, _count: true, _avg: { price: true } }),
@@ -95,7 +124,11 @@ export async function analyticsRoutes(app: FastifyInstance) {
       .sort((a, b) => b.demand - a.demand || a.supply - b.supply)
       .slice(0, 12)
 
-    const unmet = unmatched.map((u) => ({ query: u.query, count: u._count }))
+    // Склеиваем варианты с опечатками и отбрасываем короткий мусор.
+    const unmet = clusterQueries(
+      unmatched.filter((u) => u.query.trim().length >= 3).map((u) => ({ query: u.query, count: u._count })),
+      12,
+    )
 
     return { period: days === 7 ? 'week' : 'month', topRequested, topSearched, topSales, gap, unmet }
   })

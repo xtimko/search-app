@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../db'
+import { reattributeSearchLogs } from '../demand'
 
 // Админ-панель: модерация продавцов + пополнение справочника.
 // Доступ по заголовку x-admin-token (в dev = 'dev'; в проде задать ADMIN_TOKEN).
@@ -75,6 +76,8 @@ export async function adminRoutes(app: FastifyInstance) {
           imageUrl: b.imageUrl?.trim() || null,
         },
       })
+      // Пере-матчим недавние «не нашли»-поиски на новую модель (алиасы учитываются).
+      reattributeSearchLogs(model.id).catch(() => {})
       return reply.code(201).send(model)
     } catch {
       return reply.code(409).send({ error: 'такая модель у бренда уже есть' })

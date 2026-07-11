@@ -80,6 +80,7 @@
 | — доска запросов «Ищу»: матчинг, отклик=чат+оффер (`/api/requests*`) | `backend/src/routes/requests.ts` |
 | — аналитика спроса (PRO): `/api/analytics/demand` (спрос/дефицит/продажи/unmet) | `backend/src/routes/analytics.ts` |
 | — подписанные сессии (httpOnly-cookie, HMAC) | `backend/src/session.ts` |
+| — ретро-атрибуция спроса: новые модели подхватывают старые «не нашли»-поиски | `backend/src/demand.ts` |
 | — экземпляр Prisma Client | `backend/src/db.ts` |
 | — справочник: `GET /api/categories`/`brands`/`models` (поиск) + `POST /api/models` (своя модель) | `backend/src/routes/directory.ts` |
 | — эндпоинты стока: `POST`/`GET`/`PATCH`/`DELETE /api/listings` (пока от dev-продавца) | `backend/src/routes/listings.ts` |

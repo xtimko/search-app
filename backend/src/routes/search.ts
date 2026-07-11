@@ -35,6 +35,15 @@ function parseQuery(raw: string): { text: string; sizeUs: string | null; sizeEu:
   return { text: s.replace(/\s+/g, ' ').trim(), sizeUs, sizeEu }
 }
 
+// --- Транслит-нормализация для pg_trgm ---
+// Проблема: при локали БД без юникодной классификации (C/alpine musl) pg_trgm
+// НЕ строит триграммы из кириллицы → word_similarity('самба','samba…')=0.
+// Решение: обе стороны сравнения прогоняем через translate(кириллица→латиница 1:1)
+// — строка становится ASCII, триграммы работают при любой локали. Карта 1:1
+// не идеальный транслит, но она консистентна для обеих сторон — этого достаточно.
+export const TR_FROM = 'абвгдеёжзийклмнопрстуфхцчшщыэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЫЭЮЯъьЪЬ'
+export const TR_TO = 'abvgdeejziiklmnoprstufhccssyeuaabvgdeejziiklmnoprstufhccssyeua'
+
 // Релевантный подбор моделей под текст запроса (pg_trgm).
 // Возвращает Map<modelId, score>: точные/префиксные/алиасные совпадения — выше,
 // затем нечёткие (устойчивы к опечаткам и сокращениям). score примерно 0..2.3.
@@ -46,7 +55,7 @@ async function matchModels(text: string): Promise<Map<number, number>> {
   const rows = await prisma.$queryRaw<{ id: number; score: number }[]>`
     SELECT m.id::int AS id,
       (
-        word_similarity(${q}, lower(doc.d))
+        word_similarity(lower(translate(${q}, ${TR_FROM}, ${TR_TO})), nd.d)
         + CASE WHEN lower(doc.d) LIKE '%' || ${q} || '%' THEN 0.5 ELSE 0 END
         + CASE WHEN lower(m.name) LIKE ${q} || '%' THEN 0.3 ELSE 0 END
         + CASE WHEN ${q} = ANY(m.aliases) OR ${q} = ANY(b.aliases) THEN 0.7 ELSE 0 END
@@ -59,12 +68,38 @@ async function matchModels(text: string): Promise<Map<number, number>> {
         || coalesce(array_to_string(b.aliases, ' '), '') || ' '
         || coalesce(m.sku, '') AS d
     ) doc
-    WHERE word_similarity(${q}, lower(doc.d)) > 0.3
+    CROSS JOIN LATERAL (
+      SELECT lower(translate(doc.d, ${TR_FROM}, ${TR_TO})) AS d
+    ) nd
+    WHERE word_similarity(lower(translate(${q}, ${TR_FROM}, ${TR_TO})), nd.d) > 0.3
        OR lower(doc.d) LIKE '%' || ${q} || '%'
     ORDER BY score DESC
     LIMIT 80
   `
   return new Map(rows.map((r) => [Number(r.id), Number(r.score)]))
+}
+
+// Мягкий матч ТОЛЬКО для атрибуции лога спроса (не для выдачи): ловит сильные
+// опечатки, которые не дотянули до строгого порога. Возвращает top-1 или null.
+async function matchModelLoose(text: string): Promise<number | null> {
+  const q = text.trim().toLowerCase()
+  if (q.length < 4) return null // короткий мусор не атрибуцируем
+  const rows = await prisma.$queryRaw<{ id: number }[]>`
+    SELECT m.id::int AS id
+    FROM "Model" m
+    JOIN "Brand" b ON b.id = m."brandId"
+    CROSS JOIN LATERAL (
+      SELECT lower(translate(
+        b.name || ' ' || m.name || ' '
+        || coalesce(array_to_string(m.aliases, ' '), '') || ' '
+        || coalesce(array_to_string(b.aliases, ' '), '') || ' '
+        || coalesce(m.sku, ''), ${TR_FROM}, ${TR_TO})) AS d
+    ) doc
+    WHERE word_similarity(lower(translate(${q}, ${TR_FROM}, ${TR_TO})), doc.d) > 0.22
+    ORDER BY word_similarity(lower(translate(${q}, ${TR_FROM}, ${TR_TO})), doc.d) DESC
+    LIMIT 1
+  `
+  return rows[0] ? Number(rows[0].id) : null
 }
 
 export async function searchRoutes(app: FastifyInstance) {
@@ -101,11 +136,15 @@ export async function searchRoutes(app: FastifyInstance) {
     let scoreByModel = new Map<number, number>()
     if (parsed.text.length >= 2) {
       scoreByModel = await matchModels(parsed.text)
-      // Лог спроса: запрос + топ-модель (или null, если не распознали). Не блокирует ответ.
+      // Лог спроса: строгий матч → мягкий фолбэк (ловит сильные опечатки, чтобы
+      // реальный товар не попадал в «ищут, но не нашли»). Не блокирует ответ.
       const topModelId = [...scoreByModel.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
-      prisma.searchLog
-        .create({ data: { query: parsed.text.slice(0, 100), modelId: topModelId, city: city || null } })
-        .catch(() => {})
+      const logText = parsed.text.slice(0, 100)
+      const logCity = city || null
+      ;(async () => {
+        const modelId = topModelId ?? (await matchModelLoose(logText))
+        await prisma.searchLog.create({ data: { query: logText, modelId, city: logCity } })
+      })().catch(() => {})
       if (scoreByModel.size === 0) return { parsed, results: [] } // текст задан, но совпадений нет
       and.push({ modelId: { in: [...scoreByModel.keys()] } })
     }
