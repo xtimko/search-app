@@ -41,7 +41,7 @@
 | — оболочка: топбар (десктоп) + нижний таб-бар (мобайл), вкладки | `frontend/src/App.tsx` |
 | — главная: hero-поиск, категории, горячие предложения, тизер запросов | `frontend/src/components/HomePage.tsx` |
 | — карточка товара в выдаче (поиск + главная) | `frontend/src/components/ResultCard.tsx` |
-| — страница покупателя: поиск + фильтры + карточки | `frontend/src/components/SearchPage.tsx` |
+| — каталог покупателя: поиск → карточки моделей | `frontend/src/components/SearchPage.tsx` |
 | — страница продавца: разделы Сток / Добавить / Импорт, вид таблица/карточки | `frontend/src/components/SellerPage.tsx` |
 | — компактная таблица стока (инлайн: цена, размеры, продано) | `frontend/src/components/StockTable.tsx` |
 | — раздел «Профиль»: VK-карточка + профиль продавца + задел рейтинга | `frontend/src/components/ProfilePage.tsx` |
@@ -63,6 +63,10 @@
 | — заголовки авторизации к API (`x-vk-user-id`) | `frontend/src/api/client.ts` |
 | — массовая загрузка (xlsx-шаблон, парсинг, preview/commit) | `frontend/src/components/ImportPanel.tsx` |
 | — клиент поиска (`/api/search`) | `frontend/src/api/search.ts` |
+| — каталог: `GET /api/catalog` (модели+агрегаты), `GET /api/catalog/:id` (товар+офферы) | `backend/src/routes/catalog.ts` |
+| — клиент каталога | `frontend/src/api/catalog.ts` |
+| — карточка модели в каталоге | `frontend/src/components/ProductCard.tsx` |
+| — страница товара: офферы по размерам, последняя продажа (StockX-формат) | `frontend/src/components/ProductPage.tsx` |
 | — клиент импорта (SheetJS) | `frontend/src/api/import.ts` |
 | — клиент справочника (fetch `/api/brands`, `/api/models`) | `frontend/src/api/directory.ts` |
 | — клиент стока (`createListing`, `fetchMyListings`) | `frontend/src/api/listings.ts` |

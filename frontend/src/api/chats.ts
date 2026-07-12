@@ -33,6 +33,7 @@ export interface Deal {
   buyerConfirmed: boolean
   sellerConfirmed: boolean
   review?: { id: number; rating: number } | null
+  guarantor?: string | null
   createdAt: string
   closedAt: string | null
 }
@@ -138,6 +139,14 @@ export function confirmDeal(id: number): Promise<DealFull> {
 
 export function cancelDeal(id: number): Promise<DealFull> {
   return req<DealFull>(`/api/deals/${id}/cancel`, { method: 'POST' })
+}
+
+export function setDealGuarantor(id: number, name: string): Promise<DealFull> {
+  return req<DealFull>(`/api/deals/${id}/guarantor`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })
 }
 
 export function reviewDeal(id: number, rating: number, text: string): Promise<{ id: number }> {

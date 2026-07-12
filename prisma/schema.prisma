@@ -133,6 +133,7 @@ model Deal {
   status          DealStatus   @default(open)
   buyerConfirmed  Boolean      @default(false)
   sellerConfirmed Boolean      @default(false)
+  guarantor       String? // опциональный гарант-посредник (имя/контакт)
   review          Review?
   createdAt       DateTime     @default(now())
   closedAt        DateTime?

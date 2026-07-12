@@ -192,6 +192,32 @@ export async function dealRoutes(app: FastifyInstance) {
     return updated
   })
 
+  // POST /api/deals/:id/guarantor { name } — назначить/сменить гаранта (пока сделка открыта).
+  app.post<{ Params: { id: string } }>('/api/deals/:id/guarantor', async (req, reply) => {
+    const me = await requireAuth(req, reply)
+    if (!me) return
+    const id = Number(req.params.id)
+    const name = String((req.body as { name?: string })?.name ?? '').trim().slice(0, 120)
+    if (!name) return reply.code(400).send({ error: 'укажи имя/контакт гаранта' })
+    const deal = await prisma.deal.findUnique({ where: { id } })
+    if (!deal || (deal.buyerId !== me && deal.sellerId !== me)) return reply.code(404).send({ error: 'сделка не найдена' })
+    if (deal.status !== 'open') return reply.code(400).send({ error: 'сделка уже закрыта' })
+
+    const [updated] = await prisma.$transaction([
+      prisma.deal.update({ where: { id }, data: { guarantor: name }, include: dealInclude }),
+      prisma.message.create({
+        data: {
+          conversationId: deal.conversationId,
+          senderId: me,
+          kind: 'system',
+          text: `Гарант сделки: ${name}. Оплата — через гаранта, перевод продавцу после подтверждения получения.`,
+        },
+      }),
+      prisma.conversation.update({ where: { id: deal.conversationId }, data: { updatedAt: new Date() } }),
+    ])
+    return updated
+  })
+
   // POST /api/deals/:id/review { rating, text? } — отзыв покупателя по завершённой сделке.
   app.post<{ Params: { id: string } }>('/api/deals/:id/review', async (req, reply) => {
     const me = await requireAuth(req, reply)

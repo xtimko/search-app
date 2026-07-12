@@ -10,6 +10,7 @@ import { dealRoutes } from './routes/deals'
 import { sellerRoutesPublic } from './routes/sellers'
 import { requestRoutes } from './routes/requests'
 import { analyticsRoutes } from './routes/analytics'
+import { catalogRoutes } from './routes/catalog'
 import { directoryRoutes } from './routes/directory'
 import { listingRoutes } from './routes/listings'
 import { searchRoutes } from './routes/search'
@@ -42,6 +43,8 @@ app.register(sellerRoutesPublic)
 app.register(requestRoutes)
 // Аналитика спроса (PRO).
 app.register(analyticsRoutes)
+// Каталог (карточки моделей + офферы, как StockX).
+app.register(catalogRoutes)
 // Эндпоинты единого справочника брендов/моделей.
 app.register(directoryRoutes)
 // Эндпоинты стока (листинги продавца).

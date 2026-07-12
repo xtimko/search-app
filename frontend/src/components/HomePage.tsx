@@ -1,24 +1,24 @@
 import { useEffect, useState } from 'react'
 import { fetchCategories, type Category } from '../api/directory'
-import { search, type SearchResult } from '../api/search'
+import { fetchCatalog, type CatalogItem } from '../api/catalog'
 import { fetchRequests, type BuyRequest } from '../api/requests'
-import { ResultCard } from './ResultCard'
+import { ProductCard } from './ProductCard'
 
 const CATEGORY_ORDER: Record<string, number> = { footwear: 0, apparel: 1 }
 
 // Главная: hero-поиск, категории, горячие предложения, тизер запросов «Ищу».
 export function HomePage({
   onSearch,
-  onContact,
+  onOpenProduct,
   onGoRequests,
 }: {
   onSearch: (q?: string, categorySlug?: string) => void
-  onContact?: (r: SearchResult) => void
+  onOpenProduct: (modelId: number) => void
   onGoRequests?: () => void
 }) {
   const [q, setQ] = useState('')
   const [categories, setCategories] = useState<Category[]>([])
-  const [hot, setHot] = useState<SearchResult[]>([])
+  const [hot, setHot] = useState<CatalogItem[]>([])
   const [requests, setRequests] = useState<BuyRequest[]>([])
 
   useEffect(() => {
@@ -31,8 +31,8 @@ export function HomePage({
         ),
       )
       .catch(() => {})
-    // «Горячие» — пока свежие поступления; позже здесь будут платные промо-слоты.
-    search({ sort: 'new' })
+    // «Горячие» — модели со свежими поступлениями; позже здесь будут платные промо-слоты.
+    fetchCatalog({ sort: 'new' })
       .then((res) => setHot(res.results.slice(0, 8)))
       .catch(() => {})
     fetchRequests()
@@ -95,9 +95,9 @@ export function HomePage({
         {hot.length === 0 ? (
           <p className="text-3">пока пусто — сток наполняется</p>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 10 }}>
-            {hot.map((r) => (
-              <ResultCard key={r.id} r={r} compact onContact={onContact} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 12 }}>
+            {hot.map((it) => (
+              <ProductCard key={it.model.id} item={it} onOpen={onOpenProduct} />
             ))}
           </div>
         )}

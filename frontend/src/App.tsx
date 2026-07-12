@@ -10,7 +10,7 @@ import { AnalyticsPage } from './components/AnalyticsPage'
 import { LoginGate } from './components/LoginGate'
 import { fetchAuthMe, logout, type AuthUser } from './api/auth'
 import { openChat, fetchUnread } from './api/chats'
-import type { SearchResult } from './api/search'
+import { ProductPage } from './components/ProductPage'
 
 export type Tab = 'home' | 'search' | 'requests' | 'chats' | 'seller' | 'analytics' | 'profile' | 'admin'
 
@@ -91,6 +91,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('home')
   const [searchInit, setSearchInit] = useState<{ q?: string; categorySlug?: string; seed: number }>({ seed: 0 })
   const [chatInit, setChatInit] = useState<{ chatId?: number; seed: number }>({ seed: 0 })
+  const [productId, setProductId] = useState<number | null>(null)
   const [auth, setAuth] = useState<AuthUser | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
   const [unread, setUnread] = useState(0)
@@ -144,17 +145,24 @@ export default function App() {
     setTab('chats')
   }
 
-  async function contactSeller(r: SearchResult) {
+  // «Написать» по офферу: авторизован → внутренний чат; нет — внешний контакт.
+  async function contactByListing(listingId: number, fallbackContact: string) {
     if (!auth) {
-      window.open(r.seller.contact, '_blank')
+      window.open(fallbackContact, '_blank')
       return
     }
     try {
-      const conv = await openChat(r.id)
+      const conv = await openChat(listingId)
+      setProductId(null)
       goChat(conv.id)
     } catch (e) {
       alert((e as Error).message)
     }
+  }
+
+  function openProduct(modelId: number) {
+    setProductId(modelId)
+    window.scrollTo(0, 0)
   }
 
   async function onLogout() {
@@ -175,7 +183,7 @@ export default function App() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <header style={{ borderBottom: '1px solid var(--glass-brd)', position: 'sticky', top: 0, background: 'var(--glass-bg)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', zIndex: 50 }}>
         <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 16, height: 58 }}>
-          <div className="display" style={{ fontSize: 15, cursor: 'pointer', flexShrink: 0, letterSpacing: '0.02em' }} onClick={() => setTab('home')}>
+          <div className="display" style={{ fontSize: 15, cursor: 'pointer', flexShrink: 0, letterSpacing: '0.02em' }} onClick={() => { setProductId(null); setTab('home') }}>
             <span>SEARCH</span>
             <span style={{ color: 'var(--text-3)' }}>APP</span>
           </div>
@@ -186,7 +194,7 @@ export default function App() {
                   key={n.id}
                   className={tab === n.id ? 'btn btn-sm' : 'btn btn-sm btn-ghost'}
                   style={tab === n.id ? { background: 'var(--bg-elev)' } : undefined}
-                  onClick={() => setTab(n.id)}
+                  onClick={() => { setProductId(null); setTab(n.id) }}
                 >
                   {n.label}
                   {n.id === 'chats' && unread > 0 && unreadBadge}
@@ -220,17 +228,25 @@ export default function App() {
       </header>
 
       <main style={{ maxWidth: 1080, margin: '0 auto', padding: `0 16px ${isDesktop ? 48 : 108}px`, width: '100%', flex: 1 }}>
-        {tab === 'home' && <HomePage onSearch={goSearch} onContact={contactSeller} onGoRequests={() => setTab('requests')} />}
-        {tab === 'search' && (
-          <SearchPage key={searchInit.seed} initialQ={searchInit.q} initialCategorySlug={searchInit.categorySlug} onContact={contactSeller} />
+        {productId != null && (
+          <ProductPage
+            modelId={productId}
+            onBack={() => setProductId(null)}
+            onContact={contactByListing}
+            onLeaveRequest={() => { setProductId(null); setTab('requests') }}
+          />
         )}
-        {tab === 'requests' && <RequestsPage meId={auth?.id ?? null} onOpenChat={goChat} onNeedAuth={() => setTab('profile')} />}
-        {tab === 'chats' &&
+        {productId == null && tab === 'home' && <HomePage onSearch={goSearch} onOpenProduct={openProduct} onGoRequests={() => setTab('requests')} />}
+        {productId == null && tab === 'search' && (
+          <SearchPage key={searchInit.seed} initialQ={searchInit.q} initialCategorySlug={searchInit.categorySlug} onOpenProduct={openProduct} />
+        )}
+        {productId == null && tab === 'requests' && <RequestsPage meId={auth?.id ?? null} onOpenChat={goChat} onNeedAuth={() => setTab('profile')} />}
+        {productId == null && tab === 'chats' &&
           (authed ? <ChatsPage key={chatInit.seed} meId={auth.id} initialChatId={chatInit.chatId} /> : <LoginGate what="Раздел «Чаты»" />)}
-        {tab === 'seller' && (authed ? <SellerPage /> : <LoginGate what="Раздел «Мой сток»" />)}
-        {tab === 'analytics' && (authed ? <AnalyticsPage /> : <LoginGate what="Аналитика спроса" />)}
-        {tab === 'profile' && (authed ? <ProfilePage auth={auth} onLogout={onLogout} onOpenChat={goChat} onOpenAnalytics={() => setTab('analytics')} /> : <LoginGate what="Раздел «Профиль»" />)}
-        {tab === 'admin' && <AdminPage />}
+        {productId == null && tab === 'seller' && (authed ? <SellerPage /> : <LoginGate what="Раздел «Мой сток»" />)}
+        {productId == null && tab === 'analytics' && (authed ? <AnalyticsPage /> : <LoginGate what="Аналитика спроса" />)}
+        {productId == null && tab === 'profile' && (authed ? <ProfilePage auth={auth} onLogout={onLogout} onOpenChat={goChat} onOpenAnalytics={() => setTab('analytics')} /> : <LoginGate what="Раздел «Профиль»" />)}
+        {productId == null && tab === 'admin' && <AdminPage />}
       </main>
 
       {isDesktop && (
@@ -286,7 +302,7 @@ export default function App() {
             return (
               <button
                 key={t.id}
-                onClick={() => setTab(t.id)}
+                onClick={() => { setProductId(null); setTab(t.id) }}
                 aria-label={t.label}
                 aria-current={active ? 'page' : undefined}
                 style={{

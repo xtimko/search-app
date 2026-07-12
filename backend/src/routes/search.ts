@@ -47,7 +47,7 @@ export const TR_TO = 'abvgdeejziiklmnoprstufhccssyeuaabvgdeejziiklmnoprstufhccss
 // Релевантный подбор моделей под текст запроса (pg_trgm).
 // Возвращает Map<modelId, score>: точные/префиксные/алиасные совпадения — выше,
 // затем нечёткие (устойчивы к опечаткам и сокращениям). score примерно 0..2.3.
-async function matchModels(text: string): Promise<Map<number, number>> {
+export async function matchModels(text: string): Promise<Map<number, number>> {
   const q = text.trim().toLowerCase()
   if (q.length < 2) return new Map()
 
