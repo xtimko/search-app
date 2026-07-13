@@ -62,3 +62,37 @@ export async function setModelImage(id: number, imageUrl: string) {
   }
   return res.json()
 }
+
+export interface AdminModel {
+  id: number
+  name: string
+  sku: string | null
+  status: 'verified' | 'pending'
+  imageUrl: string | null
+  aliases: string[]
+  categoryId: number
+  brand: { id: number; name: string }
+  category: { id: number; name: string }
+  _count: { listings: number }
+}
+
+export async function fetchAdminModels(params: { status?: 'pending' | 'verified'; q?: string }): Promise<AdminModel[]> {
+  const p = new URLSearchParams()
+  if (params.status) p.set('status', params.status)
+  if (params.q) p.set('q', params.q)
+  const res = await fetch(`/api/admin/models?${p.toString()}`, { headers: headers() })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function updateModel(id: number, patch: Partial<{ name: string; sku: string; categoryId: number; aliases: string[]; imageUrl: string; status: 'verified' | 'pending' }>) {
+  const res = await fetch(`/api/admin/models/${id}`, { method: 'PATCH', headers: headers(), body: JSON.stringify(patch) })
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as { error?: string }).error || `HTTP ${res.status}`) }
+  return res.json()
+}
+
+export async function deleteModel(id: number) {
+  const res = await fetch(`/api/admin/models/${id}`, { method: 'DELETE', headers: headers() })
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as { error?: string }).error || `HTTP ${res.status}`) }
+  return res.json()
+}

@@ -29,6 +29,7 @@ export function ListingForm({ onCreated }: { onCreated: () => void }) {
   const [newModelName, setNewModelName] = useState('')
   const [newCategoryId, setNewCategoryId] = useState<number | ''>('')
   const [newImageUrl, setNewImageUrl] = useState('')
+  const [newSku, setNewSku] = useState('')
   const [creating, setCreating] = useState(false)
 
   useEffect(() => {
@@ -50,7 +51,7 @@ export function ListingForm({ onCreated }: { onCreated: () => void }) {
     if (!newCategoryId) return setError('Выберите категорию')
     setCreating(true)
     try {
-      const m = await createModel({ brandName: newBrand.trim(), name: newModelName.trim(), categoryId: Number(newCategoryId), imageUrl: newImageUrl.trim() || undefined })
+      const m = await createModel({ brandName: newBrand.trim(), name: newModelName.trim(), categoryId: Number(newCategoryId), imageUrl: newImageUrl.trim() || undefined, sku: newSku.trim() || undefined })
       setModel(m)
       setBrand(m.brand as Brand)
       setShowNewModel(false)
@@ -58,6 +59,7 @@ export function ListingForm({ onCreated }: { onCreated: () => void }) {
       setNewModelName('')
       setNewCategoryId('')
       setNewImageUrl('')
+      setNewSku('')
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -162,9 +164,11 @@ export function ListingForm({ onCreated }: { onCreated: () => void }) {
                   </option>
                 ))}
               </select>
+              <span className="label">Заводской артикул (если знаешь)</span>
+              <input className="input" value={newSku} onChange={(e) => setNewSku(e.target.value)} placeholder="напр. adidas B75806" />
               <span className="label">Фото модели (необязательно)</span>
               <PhotoPicker value={newImageUrl} onChange={setNewImageUrl} />
-              <div className="hint" style={{ marginTop: 4 }}>Каталожное фото подставится во все объявления этой модели.</div>
+              <div className="hint" style={{ marginTop: 4 }}>Карточка создастся сразу и уйдёт на модерацию — админ проверит название, артикул и фото. Каталожное фото подставится во все объявления этой модели.</div>
               <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                 <button className="btn btn-primary btn-sm" disabled={creating} onClick={createNewModel}>
                   {creating ? 'Создаю…' : 'Создать и выбрать'}

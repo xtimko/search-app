@@ -45,6 +45,13 @@ model Brand {
   models  Model[]
 }
 
+// Статус карточки модели: verified — «жёсткая база» (сид/админ), pending — создана
+// продавцом и ждёт модерации (используется, но помечена «на модерации»).
+enum ModelStatus {
+  verified
+  pending
+}
+
 // Модель/референс справочника — привязана к бренду и категории.
 // aliases — синонимы/сленг/артикулы для поиска. sku — артикул.
 model Model {
@@ -55,7 +62,8 @@ model Model {
   category   Category  @relation(fields: [categoryId], references: [id])
   name       String
   aliases    String[]  @default([])
-  sku        String?
+  sku        String? // заводской артикул бренда (напр. adidas B75806)
+  status     ModelStatus @default(verified)
   imageUrl   String? // каталожное фото модели (подставляется в выдаче, если у объявления нет своего)
   listings   Listing[]
   requests   Request[]

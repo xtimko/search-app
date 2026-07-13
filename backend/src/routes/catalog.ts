@@ -40,7 +40,7 @@ export async function catalogRoutes(app: FastifyInstance) {
     const models = await prisma.model.findMany({
       where: { id: { in: ids }, ...(catIds ? { categoryId: { in: catIds } } : {}) },
       select: {
-        id: true, name: true, sku: true, imageUrl: true,
+        id: true, name: true, sku: true, status: true, imageUrl: true,
         brand: { select: { name: true } },
         category: { select: { name: true, slug: true } },
       },
@@ -89,7 +89,7 @@ export async function catalogRoutes(app: FastifyInstance) {
     const model = await prisma.model.findUnique({
       where: { id },
       select: {
-        id: true, name: true, sku: true, imageUrl: true,
+        id: true, name: true, sku: true, status: true, imageUrl: true,
         brand: { select: { name: true } },
         category: { select: { name: true, slug: true } },
       },

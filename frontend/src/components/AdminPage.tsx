@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Autocomplete } from './Autocomplete'
-import { fetchCategories, fetchBrands, fetchModels, type Brand, type Category, type Model } from '../api/directory'
-import { fetchSellers, setSellerStatus, addBrand, addModel, setModelImage, type AdminSeller } from '../api/admin'
+import { fetchCategories, fetchBrands, type Brand, type Category } from '../api/directory'
+import { fetchSellers, setSellerStatus, addBrand, addModel, type AdminSeller } from '../api/admin'
 import { PhotoPicker } from './PhotoPicker'
+import { AdminModelCards } from './AdminModelCards'
 
 const STATUS: Record<AdminSeller['status'], { text: string; cls: string }> = {
   pending: { text: 'на модерации', cls: 'text-2' },
@@ -26,11 +27,6 @@ export function AdminPage() {
   const [dirMsg, setDirMsg] = useState('')
   const [resetKey, setResetKey] = useState(0)
 
-  // Куратор фото: выбор модели + ссылка.
-  const [photoModel, setPhotoModel] = useState<Model | null>(null)
-  const [photoUrl, setPhotoUrl] = useState('')
-  const [photoMsg, setPhotoMsg] = useState('')
-  const [photoKey, setPhotoKey] = useState(0)
 
   function loadSellers() {
     fetchSellers().then(setSellers).catch(() => setError('нет доступа к админке'))
@@ -80,22 +76,6 @@ export function AdminPage() {
     }
   }
 
-  async function saveModelPhoto() {
-    setPhotoMsg('')
-    if (!photoModel) {
-      setPhotoMsg('Выбери модель')
-      return
-    }
-    try {
-      await setModelImage(photoModel.id, photoUrl.trim())
-      setPhotoMsg(`Фото сохранено: ${photoModel.brand.name} ${photoModel.name}`)
-      setPhotoModel(null)
-      setPhotoUrl('')
-      setPhotoKey((k) => k + 1)
-    } catch (e) {
-      setPhotoMsg((e as Error).message)
-    }
-  }
 
   return (
     <div style={{ paddingTop: 20 }}>
@@ -185,43 +165,7 @@ export function AdminPage() {
         </div>
       </div>
 
-      <div className="section-title">Фото моделей</div>
-      <div className="hint" style={{ marginBottom: 8 }}>
-        Каталожное фото подставляется во все объявления модели, где продавец не приложил своё.
-      </div>
-      {photoMsg && (
-        <div className={photoMsg.includes('сохранено') ? 'text-success' : 'text-danger'} style={{ fontSize: 13, marginBottom: 8 }}>
-          {photoMsg}
-        </div>
-      )}
-      <div className="card" style={{ maxWidth: 460 }}>
-        <span className="label" style={{ marginTop: 0 }}>Модель</span>
-        <Autocomplete<Model>
-          key={`ph-${photoKey}`}
-          placeholder="начни вводить: samba, дж4…"
-          fetcher={(q) => fetchModels(q)}
-          getKey={(m) => m.id}
-          getLabel={(m) => `${m.brand.name} ${m.name}`}
-          renderItem={(m) => (
-            <span>
-              {m.brand.name} {m.name} <span className="text-3" style={{ fontSize: 12 }}>· {m.category.name}{m.imageUrl ? ' · есть фото' : ''}</span>
-            </span>
-          )}
-          onSelect={(m) => {
-            setPhotoModel(m)
-            setPhotoUrl(m.imageUrl ?? '')
-          }}
-        />
-        {photoModel && (
-          <>
-            <span className="label">Фото (файл или ссылка; пусто — убрать)</span>
-            <PhotoPicker value={photoUrl} onChange={setPhotoUrl} />
-            <button className="btn btn-primary btn-block" style={{ marginTop: 12 }} onClick={saveModelPhoto}>
-              Сохранить фото для «{photoModel.brand.name} {photoModel.name}»
-            </button>
-          </>
-        )}
-      </div>
+      <AdminModelCards />
     </div>
   )
 }

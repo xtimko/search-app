@@ -56,6 +56,6 @@ export function fetchModels(q: string, brandId?: number): Promise<Model[]> {
 }
 
 // Добавить модель, которой нет в справочнике (бренд создаётся, если новый).
-export function createModel(input: { brandName: string; name: string; categoryId: number; imageUrl?: string }): Promise<Model> {
+export function createModel(input: { brandName: string; name: string; categoryId: number; imageUrl?: string; sku?: string }): Promise<Model> {
   return postJson<Model>('/api/models', input)
 }

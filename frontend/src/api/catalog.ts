@@ -4,6 +4,7 @@ export interface CatalogModel {
   id: number
   name: string
   sku: string | null
+  status?: 'verified' | 'pending'
   imageUrl: string | null
   brand: { name: string }
   category: { name: string; slug: string }

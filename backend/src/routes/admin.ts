@@ -84,16 +84,74 @@ export async function adminRoutes(app: FastifyInstance) {
     }
   })
 
-  // PATCH /api/admin/models/:id — задать/сменить каталожное фото модели (куратор).
+  const modelCard = {
+    id: true,
+    name: true,
+    sku: true,
+    status: true,
+    imageUrl: true,
+    aliases: true,
+    categoryId: true,
+    brand: { select: { id: true, name: true } },
+    category: { select: { id: true, name: true } },
+    _count: { select: { listings: true } },
+  } as const
+
+  // GET /api/admin/models?status=pending|verified|all&q= — карточки для управления.
+  app.get<{ Querystring: { status?: string; q?: string } }>('/api/admin/models', async (req) => {
+    const status = req.query.status === 'pending' || req.query.status === 'verified' ? req.query.status : undefined
+    const q = (req.query.q ?? '').trim()
+    return prisma.model.findMany({
+      where: {
+        ...(status ? { status } : {}),
+        ...(q ? { OR: [{ name: { contains: q, mode: 'insensitive' } }, { sku: { contains: q, mode: 'insensitive' } }, { brand: { name: { contains: q, mode: 'insensitive' } } }] } : {}),
+      },
+      orderBy: [{ status: 'asc' }, { id: 'desc' }], // pending (p<v) сверху
+      take: 100,
+      select: modelCard,
+    })
+  })
+
+  // PATCH /api/admin/models/:id — правка карточки: имя, артикул, категория,
+  // алиасы, фото, статус (verify/pending). Передаём только меняемые поля.
   app.patch<{ Params: { id: string } }>('/api/admin/models/:id', async (req, reply) => {
     const id = Number(req.params.id)
-    const imageUrl = String((req.body as { imageUrl?: string })?.imageUrl ?? '').trim().slice(0, 500) || null
+    const b = (req.body ?? {}) as { name?: string; sku?: string; categoryId?: number; aliases?: string[]; imageUrl?: string; status?: string }
     const model = await prisma.model.findUnique({ where: { id }, select: { id: true } })
     if (!model) return reply.code(404).send({ error: 'модель не найдена' })
-    return prisma.model.update({
-      where: { id },
-      data: { imageUrl },
-      select: { id: true, name: true, imageUrl: true, brand: { select: { name: true } } },
-    })
+
+    const data: Record<string, unknown> = {}
+    if (b.name !== undefined) {
+      const n = b.name.trim()
+      if (n.length < 2) return reply.code(400).send({ error: 'название мин. 2 символа' })
+      data.name = n
+    }
+    if (b.sku !== undefined) data.sku = b.sku.trim().slice(0, 40) || null
+    if (b.imageUrl !== undefined) data.imageUrl = b.imageUrl.trim().slice(0, 500) || null
+    if (b.categoryId !== undefined) {
+      if (!(await prisma.category.count({ where: { id: b.categoryId } }))) return reply.code(400).send({ error: 'категория не найдена' })
+      data.categoryId = b.categoryId
+    }
+    if (b.aliases !== undefined) data.aliases = b.aliases.map((a) => a.toLowerCase().trim()).filter(Boolean)
+    if (b.status === 'verified' || b.status === 'pending') data.status = b.status
+
+    try {
+      const updated = await prisma.model.update({ where: { id }, data, select: modelCard })
+      if (data.aliases || data.name) reattributeSearchLogs(id).catch(() => {}) // расширили алиасы → подхватим спрос
+      return updated
+    } catch {
+      return reply.code(409).send({ error: 'у этого бренда уже есть модель с таким названием' })
+    }
+  })
+
+  // DELETE /api/admin/models/:id — удалить карточку (только если нет объявлений).
+  app.delete<{ Params: { id: string } }>('/api/admin/models/:id', async (req, reply) => {
+    const id = Number(req.params.id)
+    const cnt = await prisma.listing.count({ where: { modelId: id } })
+    if (cnt > 0) return reply.code(400).send({ error: `нельзя удалить: ${cnt} объявлений на этой модели` })
+    await prisma.searchLog.updateMany({ where: { modelId: id }, data: { modelId: null } })
+    await prisma.request.deleteMany({ where: { modelId: id } })
+    await prisma.model.delete({ where: { id } })
+    return { ok: true }
   })
 }

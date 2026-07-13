@@ -46,7 +46,8 @@
 | — компактная таблица стока (инлайн: цена, размеры, продано) | `frontend/src/components/StockTable.tsx` |
 | — раздел «Профиль»: VK-карточка + профиль продавца + задел рейтинга | `frontend/src/components/ProfilePage.tsx` |
 | — форма профиля продавца (карточка ↔ форма) | `frontend/src/components/ProfileForm.tsx` |
-| — админ-страница: модерация + пополнение справочника | `frontend/src/components/AdminPage.tsx` |
+| — админ-страница: модерация продавцов + справочник + раздел «Карточки моделей» | `frontend/src/components/AdminPage.tsx` |
+| — админ: карточки моделей (очередь модерации, правка имя/артикул/категория/алиасы/фото) | `frontend/src/components/AdminModelCards.tsx` |
 | — клиент профиля (`/api/seller/me`) | `frontend/src/api/seller.ts` |
 | — клиент админки (`/api/admin/*`) | `frontend/src/api/admin.ts` |
 | — клиент авторизации VK ID (`/api/auth/*`) | `frontend/src/api/auth.ts` |
@@ -94,8 +95,8 @@
 | — поиск покупателя: `GET /api/search` (парсер строки + нечёткий поиск pg_trgm + ранжирование + фильтры) | `backend/src/routes/search.ts` |
 | — массовый импорт: `POST /api/import/preview`/`commit` | `backend/src/routes/import.ts` |
 | — профиль продавца: `GET`/`PATCH /api/seller/me` | `backend/src/routes/seller.ts` |
-| — админка: модерация + справочник + фото моделей (`/api/admin/*`, `PATCH /models/:id`) | `backend/src/routes/admin.ts` |
-| **Схема БД** (PostgreSQL): Category(дерево), Brand, Model(+imageUrl), Listing, Seller, Conversation, Message, Deal, Review, Request(+Response), SearchLog | `prisma/schema.prisma` |
+| — админка: модерация + справочник + карточки моделей (`GET/POST/PATCH/DELETE /api/admin/models`) | `backend/src/routes/admin.ts` |
+| **Схема БД** (PostgreSQL): Category(дерево), Brand, Model(+sku/status/imageUrl), Listing, Seller, Conversation, Message, Deal, Review, Request(+Response), SearchLog | `prisma/schema.prisma` |
 | История миграций (init + catalog_revision) | `prisma/migrations/` |
 | Seed справочника (категории + бренды + модели, с алиасами) | `prisma/seed.ts` |
 | Анализ реального чата запросов (спрос, форматы) | `docs/research/vk_chat_analysis.md` |
