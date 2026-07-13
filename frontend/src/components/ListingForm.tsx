@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Autocomplete } from './Autocomplete'
 import { fetchBrands, fetchModels, fetchCategories, createModel, type Brand, type Model, type Category } from '../api/directory'
 import { createListing, type Condition } from '../api/listings'
+import { PhotoPicker } from './PhotoPicker'
 
 // Добавление вручную: один товар + несколько размеров сразу.
 export function ListingForm({ onCreated }: { onCreated: () => void }) {
@@ -16,7 +17,6 @@ export function ListingForm({ onCreated }: { onCreated: () => void }) {
   const [price, setPrice] = useState('')
   const [city, setCity] = useState('Москва')
   const [photo, setPhoto] = useState('')
-  const [photoOk, setPhotoOk] = useState(true)
   const [comment, setComment] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -162,8 +162,8 @@ export function ListingForm({ onCreated }: { onCreated: () => void }) {
                   </option>
                 ))}
               </select>
-              <span className="label">Фото модели (ссылка, необязательно)</span>
-              <input className="input" value={newImageUrl} onChange={(e) => setNewImageUrl(e.target.value)} placeholder="https://…" />
+              <span className="label">Фото модели (необязательно)</span>
+              <PhotoPicker value={newImageUrl} onChange={setNewImageUrl} />
               <div className="hint" style={{ marginTop: 4 }}>Каталожное фото подставится во все объявления этой модели.</div>
               <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                 <button className="btn btn-primary btn-sm" disabled={creating} onClick={createNewModel}>
@@ -225,30 +225,8 @@ export function ListingForm({ onCreated }: { onCreated: () => void }) {
           <input className="input" type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="12000" />
           <span className="label">Город</span>
           <input className="input" value={city} onChange={(e) => setCity(e.target.value)} />
-          <span className="label">Фото (ссылка)</span>
-          <input
-            className="input"
-            value={photo}
-            onChange={(e) => {
-              setPhoto(e.target.value)
-              setPhotoOk(true)
-            }}
-            placeholder="https://…"
-          />
-          {photo.trim() && (
-            <div style={{ marginTop: 8 }}>
-              {photoOk ? (
-                <img
-                  src={photo.trim()}
-                  alt="превью"
-                  onError={() => setPhotoOk(false)}
-                  style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border)' }}
-                />
-              ) : (
-                <div className="text-danger" style={{ fontSize: 13 }}>Не удалось загрузить фото — проверь ссылку</div>
-              )}
-            </div>
-          )}
+          <span className="label">Фото своей пары (необязательно)</span>
+          <PhotoPicker value={photo} onChange={setPhoto} hint="Если не добавишь — в каталоге покажется фото модели." />
           <span className="label">Комментарий</span>
           <textarea className="textarea" value={comment} onChange={(e) => setComment(e.target.value)} />
         </>

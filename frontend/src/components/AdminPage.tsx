@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Autocomplete } from './Autocomplete'
 import { fetchCategories, fetchBrands, fetchModels, type Brand, type Category, type Model } from '../api/directory'
 import { fetchSellers, setSellerStatus, addBrand, addModel, setModelImage, type AdminSeller } from '../api/admin'
+import { PhotoPicker } from './PhotoPicker'
 
 const STATUS: Record<AdminSeller['status'], { text: string; cls: string }> = {
   pending: { text: 'на модерации', cls: 'text-2' },
@@ -176,8 +177,8 @@ export function AdminPage() {
           <input className="input" value={mAliases} onChange={(e) => setMAliases(e.target.value)} />
           <span className="label">Артикул (опц.)</span>
           <input className="input" value={mSku} onChange={(e) => setMSku(e.target.value)} />
-          <span className="label">Фото модели (ссылка, опц.)</span>
-          <input className="input" value={mImage} onChange={(e) => setMImage(e.target.value)} placeholder="https://…" />
+          <span className="label">Фото модели (опц.)</span>
+          <PhotoPicker value={mImage} onChange={setMImage} />
           <button className="btn btn-primary btn-block" style={{ marginTop: 14 }} onClick={submitModel}>
             Добавить модель
           </button>
@@ -213,15 +214,8 @@ export function AdminPage() {
         />
         {photoModel && (
           <>
-            <span className="label">Ссылка на фото (пусто — убрать)</span>
-            <input className="input" value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder="https://…" />
-            {photoUrl.trim() && (
-              <img
-                src={photoUrl.trim()}
-                alt="превью"
-                style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border)', marginTop: 8 }}
-              />
-            )}
+            <span className="label">Фото (файл или ссылка; пусто — убрать)</span>
+            <PhotoPicker value={photoUrl} onChange={setPhotoUrl} />
             <button className="btn btn-primary btn-block" style={{ marginTop: 12 }} onClick={saveModelPhoto}>
               Сохранить фото для «{photoModel.brand.name} {photoModel.name}»
             </button>

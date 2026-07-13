@@ -11,6 +11,7 @@ import { sellerRoutesPublic } from './routes/sellers'
 import { requestRoutes } from './routes/requests'
 import { analyticsRoutes } from './routes/analytics'
 import { catalogRoutes } from './routes/catalog'
+import { uploadRoutes, UPLOAD_DIR } from './routes/upload'
 import { directoryRoutes } from './routes/directory'
 import { listingRoutes } from './routes/listings'
 import { searchRoutes } from './routes/search'
@@ -45,6 +46,9 @@ app.register(requestRoutes)
 app.register(analyticsRoutes)
 // Каталог (карточки моделей + офферы, как StockX).
 app.register(catalogRoutes)
+// Загрузка фото (multipart → WebP) + раздача /uploads.
+app.register(uploadRoutes)
+app.register(fastifyStatic, { root: UPLOAD_DIR, prefix: '/uploads/', decorateReply: false })
 // Эндпоинты единого справочника брендов/моделей.
 app.register(directoryRoutes)
 // Эндпоинты стока (листинги продавца).

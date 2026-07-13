@@ -29,10 +29,14 @@ services:
       VK_APP_SECRET: ${VK_APP_SECRET:-}
       SESSION_SECRET: ${SESSION_SECRET:?нужно задать SESSION_SECRET в .env}
       ALLOW_TEST_LOGIN: ${ALLOW_TEST_LOGIN:-}
+      UPLOAD_DIR: /app/uploads
       NODE_ENV: production
       PORT: 3000
     ports:
       - '127.0.0.1:8080:3000'
+    volumes:
+      - uploads:/app/uploads
 
 volumes:
   pgdata:
+  uploads:

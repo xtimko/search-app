@@ -85,6 +85,10 @@ sudo docker compose up -d --build     # пересоберёт и перезап
 ```
 
 ## Бэкап БД
+
+> Фото живут в named volume `uploads` — бэкапить вместе с БД:
+> `sudo docker run --rm -v stockpoisk_uploads:/u -v $(pwd):/b alpine tar czf /b/uploads-backup.tgz -C /u .`
+
 ```bash
 sudo docker compose exec db pg_dump -U stockpoisk stockpoisk > backup_$(date +%F).sql
 ```

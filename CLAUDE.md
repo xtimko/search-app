@@ -68,6 +68,9 @@
 | — карточка модели в каталоге | `frontend/src/components/ProductCard.tsx` |
 | — страница товара: офферы по размерам, последняя продажа (StockX-формат) | `frontend/src/components/ProductPage.tsx` |
 | — клиент импорта (SheetJS) | `frontend/src/api/import.ts` |
+| — загрузка фото: multipart → sharp → WebP → `/uploads` (volume) | `backend/src/routes/upload.ts` |
+| — клиент загрузки фото | `frontend/src/api/upload.ts` |
+| — выбор фото: файл или ссылка + превью (админка, формы) | `frontend/src/components/PhotoPicker.tsx` |
 | — клиент справочника (fetch `/api/brands`, `/api/models`) | `frontend/src/api/directory.ts` |
 | — клиент стока (`createListing`, `fetchMyListings`) | `frontend/src/api/listings.ts` |
 | — компонент автоподстановки (debounce, навигация клавишами) | `frontend/src/components/Autocomplete.tsx` |
