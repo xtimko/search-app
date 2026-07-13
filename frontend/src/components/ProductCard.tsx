@@ -5,11 +5,12 @@ import type { CatalogItem } from '../api/catalog'
 export function ProductCard({ item, onOpen }: { item: CatalogItem; onOpen: (modelId: number) => void }) {
   const [imgOk, setImgOk] = useState(true)
   const m = item.model
+  const img = item.photo
   return (
     <div className="card card-hover" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 10 }} onClick={() => onOpen(m.id)}>
       <div style={{ aspectRatio: '4 / 3', borderRadius: 10, background: 'var(--bg-elev)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-        {m.imageUrl && imgOk ? (
-          <img src={m.imageUrl} alt={`${m.brand.name} ${m.name}`} onError={() => setImgOk(false)} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        {img && imgOk ? (
+          <img src={img} alt={`${m.brand.name} ${m.name}`} onError={() => setImgOk(false)} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <span className="display text-3" style={{ fontSize: 30 }}>{m.brand.name.slice(0, 1)}</span>
         )}

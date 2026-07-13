@@ -58,8 +58,8 @@ export function ProductPage({
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginTop: 12 }}>
         <div className="card" style={{ aspectRatio: '4 / 3', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: 0 }}>
-          {m.imageUrl && imgOk ? (
-            <img src={m.imageUrl} alt={`${m.brand.name} ${m.name}`} onError={() => setImgOk(false)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          {data.photo && imgOk ? (
+            <img src={data.photo} alt={`${m.brand.name} ${m.name}`} onError={() => setImgOk(false)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
             <span className="display text-3" style={{ fontSize: 56 }}>{m.brand.name.slice(0, 1)}</span>
           )}

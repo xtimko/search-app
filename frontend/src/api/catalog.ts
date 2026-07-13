@@ -11,6 +11,7 @@ export interface CatalogModel {
 
 export interface CatalogItem {
   model: CatalogModel
+  photo: string | null // фото модели или фолбэк из объявления
   minPrice: number | null
   offersCount: number
 }
@@ -42,6 +43,7 @@ export interface Offer {
 
 export interface ProductData {
   model: CatalogModel
+  photo: string | null
   lastSale: { price: number; at: string } | null
   activeRequests: number
   offers: Offer[]

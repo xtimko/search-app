@@ -46,9 +46,28 @@ export async function catalogRoutes(app: FastifyInstance) {
       },
     })
 
+    // Фолбэк фото карточки: если у модели нет каталожного imageUrl — берём
+    // фото из любого её живого объявления (продавец приложил своё фото).
+    const noImgIds = models.filter((m) => !m.imageUrl).map((m) => m.id)
+    const photoByModel = new Map<number, string>()
+    if (noImgIds.length) {
+      const withPhoto = await prisma.listing.findMany({
+        where: { ...LIVE, modelId: { in: noImgIds }, photo: { not: null } },
+        orderBy: { createdAt: 'desc' },
+        select: { modelId: true, photo: true },
+      })
+      for (const l of withPhoto) if (l.photo && !photoByModel.has(l.modelId)) photoByModel.set(l.modelId, l.photo)
+    }
+
     const items = models.map((m) => {
       const g = aggByModel.get(m.id)
-      return { model: m, minPrice: g?._min.price ?? null, offersCount: g?._count ?? 0, lastAdded: g?._max.createdAt ?? null }
+      return {
+        model: m,
+        photo: m.imageUrl ?? photoByModel.get(m.id) ?? null,
+        minPrice: g?._min.price ?? null,
+        offersCount: g?._count ?? 0,
+        lastAdded: g?._max.createdAt ?? null,
+      }
     })
 
     items.sort((a, b) => {
@@ -107,6 +126,8 @@ export async function catalogRoutes(app: FastifyInstance) {
 
     return {
       model,
+      // hero: фото модели, иначе первое фото из офферов
+      photo: model.imageUrl ?? offers.find((o) => o.photo)?.photo ?? null,
       lastSale: lastDeal ? { price: lastDeal.price, at: lastDeal.closedAt } : null,
       activeRequests: requestsCount,
       offers: offers.map((o) => ({
