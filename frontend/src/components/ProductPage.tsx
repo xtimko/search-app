@@ -25,6 +25,11 @@ export function ProductPage({
     fetchProduct(modelId).then(setData).catch(() => setError('не удалось загрузить товар'))
   }, [modelId])
 
+  // Заголовок вкладки по названию модели (для шаринга/истории).
+  useEffect(() => {
+    if (data) document.title = `${data.model.brand.name} ${data.model.name} — Search-app`
+  }, [data])
+
   // Размеры: label → { count, minPrice }
   const sizes = useMemo(() => {
     const m = new Map<string, { count: number; minPrice: number }>()

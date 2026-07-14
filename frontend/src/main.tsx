@@ -1,5 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import '@fontsource/onest/400.css'
 import '@fontsource/onest/500.css'
 import '@fontsource/onest/600.css'
@@ -17,7 +18,9 @@ import { initVk } from './vk'
 function render() {
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-      <App />
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
     </React.StrictMode>,
   )
 }

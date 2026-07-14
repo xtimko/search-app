@@ -1,79 +1,81 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Routes, Route, Navigate, useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { HomePage } from './components/HomePage'
 import { SearchPage } from './components/SearchPage'
-import { SellerPage } from './components/SellerPage'
-import { ProfilePage } from './components/ProfilePage'
-import { AdminPage } from './components/AdminPage'
-import { ChatsPage } from './components/ChatsPage'
-import { RequestsPage } from './components/RequestsPage'
-import { AnalyticsPage } from './components/AnalyticsPage'
 import { LoginGate } from './components/LoginGate'
 import { fetchAuthMe, logout, type AuthUser } from './api/auth'
 import { openChat, fetchUnread } from './api/chats'
-import { ProductPage } from './components/ProductPage'
+
+// Тяжёлые страницы — по требованию (code-splitting по маршрутам).
+const ProductPage = lazy(() => import('./components/ProductPage').then((m) => ({ default: m.ProductPage })))
+const SellerPage = lazy(() => import('./components/SellerPage').then((m) => ({ default: m.SellerPage })))
+const ProfilePage = lazy(() => import('./components/ProfilePage').then((m) => ({ default: m.ProfilePage })))
+const AdminPage = lazy(() => import('./components/AdminPage').then((m) => ({ default: m.AdminPage })))
+const ChatsPage = lazy(() => import('./components/ChatsPage').then((m) => ({ default: m.ChatsPage })))
+const RequestsPage = lazy(() => import('./components/RequestsPage').then((m) => ({ default: m.RequestsPage })))
+const AnalyticsPage = lazy(() => import('./components/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })))
 
 export type Tab = 'home' | 'search' | 'requests' | 'chats' | 'seller' | 'analytics' | 'profile' | 'admin'
 
-const NAV: { id: Tab; label: string }[] = [
-  { id: 'home', label: 'Главная' },
-  { id: 'search', label: 'Поиск' },
-  { id: 'requests', label: 'Запросы' },
-  { id: 'chats', label: 'Чаты' },
-  { id: 'seller', label: 'Мой сток' },
-  { id: 'analytics', label: 'Аналитика' },
-  { id: 'profile', label: 'Профиль' },
-  { id: 'admin', label: 'Админ' },
+const NAV: { id: Tab; label: string; path: string }[] = [
+  { id: 'home', label: 'Главная', path: '/' },
+  { id: 'search', label: 'Поиск', path: '/catalog' },
+  { id: 'requests', label: 'Запросы', path: '/requests' },
+  { id: 'chats', label: 'Чаты', path: '/chats' },
+  { id: 'seller', label: 'Мой сток', path: '/seller' },
+  { id: 'analytics', label: 'Аналитика', path: '/analytics' },
+  { id: 'profile', label: 'Профиль', path: '/profile' },
+  { id: 'admin', label: 'Админ', path: '/admin' },
 ]
 
-// Иконки нижнего таб-бара (инлайн-SVG, без внешних библиотек).
+const MOBILE_TABS: { id: Tab; label: string; path: string }[] = [
+  { id: 'search', label: 'Поиск', path: '/catalog' },
+  { id: 'requests', label: 'Запросы', path: '/requests' },
+  { id: 'chats', label: 'Чаты', path: '/chats' },
+  { id: 'seller', label: 'Сток', path: '/seller' },
+  { id: 'profile', label: 'Профиль', path: '/profile' },
+]
+
+// Заголовки вкладок браузера по маршруту (product переопределяет сам).
+const TITLES: Record<string, string> = {
+  '/': 'Search-app — весь сток реселлеров в одном поиске',
+  '/catalog': 'Каталог — Search-app',
+  '/requests': 'Запросы «Ищу» — Search-app',
+  '/chats': 'Чаты — Search-app',
+  '/seller': 'Мой сток — Search-app',
+  '/analytics': 'Аналитика спроса — Search-app',
+  '/profile': 'Профиль — Search-app',
+  '/admin': 'Админ — Search-app',
+}
+
+// Текущая «вкладка» из пути (для подсветки навигации и пилюли).
+function tabFromPath(pathname: string): Tab | null {
+  if (pathname === '/') return 'home'
+  if (pathname.startsWith('/catalog')) return 'search'
+  if (pathname.startsWith('/requests')) return 'requests'
+  if (pathname.startsWith('/chats')) return 'chats'
+  if (pathname.startsWith('/seller')) return 'seller'
+  if (pathname.startsWith('/analytics')) return 'analytics'
+  if (pathname.startsWith('/profile')) return 'profile'
+  if (pathname.startsWith('/admin')) return 'admin'
+  return null // /product/:id и прочее — без подсветки
+}
+
 function TabIcon({ tab }: { tab: Tab }) {
   const common = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
   switch (tab) {
     case 'search':
-      return (
-        <svg {...common}>
-          <circle cx="11" cy="11" r="7" />
-          <path d="M20 20l-4.2-4.2" />
-        </svg>
-      )
+      return (<svg {...common}><circle cx="11" cy="11" r="7" /><path d="M20 20l-4.2-4.2" /></svg>)
     case 'requests':
-      return (
-        <svg {...common}>
-          <path d="M4 10v4h3l6 4V6l-6 4H4z" />
-          <path d="M17 9a4 4 0 0 1 0 6" />
-        </svg>
-      )
+      return (<svg {...common}><path d="M4 10v4h3l6 4V6l-6 4H4z" /><path d="M17 9a4 4 0 0 1 0 6" /></svg>)
     case 'chats':
-      return (
-        <svg {...common}>
-          <path d="M4 5h16v11H8l-4 4V5z" />
-        </svg>
-      )
+      return (<svg {...common}><path d="M4 5h16v11H8l-4 4V5z" /></svg>)
     case 'seller':
-      return (
-        <svg {...common}>
-          <path d="M4 8l8-4 8 4v9l-8 4-8-4V8z" />
-          <path d="M4 8l8 4 8-4" />
-          <path d="M12 12v9" />
-        </svg>
-      )
+      return (<svg {...common}><path d="M4 8l8-4 8 4v9l-8 4-8-4V8z" /><path d="M4 8l8 4 8-4" /><path d="M12 12v9" /></svg>)
     default:
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="8" r="4" />
-          <path d="M4 21c1.5-4 5-5 8-5s6.5 1 8 5" />
-        </svg>
-      )
+      return (<svg {...common}><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 5-5 8-5s6.5 1 8 5" /></svg>)
   }
 }
-
-const MOBILE_TABS: { id: Tab; label: string }[] = [
-  { id: 'search', label: 'Поиск' },
-  { id: 'requests', label: 'Запросы' },
-  { id: 'chats', label: 'Чаты' },
-  { id: 'seller', label: 'Сток' },
-  { id: 'profile', label: 'Профиль' },
-]
 
 function useIsDesktop(): boolean {
   const [d, setD] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 900)
@@ -85,19 +87,36 @@ function useIsDesktop(): boolean {
   return d
 }
 
-// Оболочка Search-app: на десктопе — навигация в топбаре, на мобиле — нижний таб-бар.
+const PageFallback = (
+  <div style={{ paddingTop: 24, display: 'grid', gap: 12 }}>
+    <div className="skeleton" style={{ height: 40, maxWidth: 320 }} />
+    <div className="skeleton" style={{ height: 180 }} />
+  </div>
+)
+
+// Гейт приватных разделов: пока идёт проверка авторизации — скелетон, иначе гейт входа.
+function Gate({ authed, authChecked, what, children }: { authed: boolean; authChecked: boolean; what: string; children: React.ReactNode }) {
+  if (!authChecked) return PageFallback
+  return authed ? <>{children}</> : <LoginGate what={what} />
+}
+
 export default function App() {
   const isDesktop = useIsDesktop()
-  const [tab, setTab] = useState<Tab>('home')
-  const [searchInit, setSearchInit] = useState<{ q?: string; categorySlug?: string; seed: number }>({ seed: 0 })
-  const [chatInit, setChatInit] = useState<{ chatId?: number; seed: number }>({ seed: 0 })
-  const [productId, setProductId] = useState<number | null>(null)
+  const navigate = useNavigate()
+  const location = useLocation()
+  const tab = tabFromPath(location.pathname)
+
   const [auth, setAuth] = useState<AuthUser | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
   const [unread, setUnread] = useState(0)
 
-  // Плавающая активная пилюля нижнего таб-бара: замеряем активную кнопку и
-  // анимированно переезжаем к ней. null — если активной вкладки нет в баре.
+  // Заголовок вкладки браузера по маршруту.
+  useEffect(() => {
+    const t = TITLES[location.pathname]
+    if (t) document.title = t
+  }, [location.pathname])
+
+  // Плавающая активная пилюля нижнего таб-бара.
   const bottomNavRef = useRef<HTMLElement>(null)
   const [pill, setPill] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
   const recalcPill = useCallback(() => {
@@ -118,9 +137,7 @@ export default function App() {
   }, [recalcPill])
 
   useEffect(() => {
-    fetchAuthMe()
-      .then(setAuth)
-      .finally(() => setAuthChecked(true))
+    fetchAuthMe().then(setAuth).finally(() => setAuthChecked(true))
   }, [])
 
   useEffect(() => {
@@ -129,61 +146,46 @@ export default function App() {
     const tick = () => fetchUnread().then((r) => !stop && setUnread(r.count)).catch(() => {})
     tick()
     const t = setInterval(tick, 15000)
-    return () => {
-      stop = true
-      clearInterval(t)
-    }
-  }, [auth, tab])
+    return () => { stop = true; clearInterval(t) }
+  }, [auth, location.pathname])
 
   function goSearch(q?: string, categorySlug?: string) {
-    setSearchInit((s) => ({ q, categorySlug, seed: s.seed + 1 }))
-    setTab('search')
+    const p = new URLSearchParams()
+    if (q) p.set('q', q)
+    if (categorySlug) p.set('cat', categorySlug)
+    navigate(`/catalog${p.toString() ? `?${p}` : ''}`)
   }
-
+  function openProduct(modelId: number) {
+    navigate(`/product/${modelId}`)
+  }
   function goChat(chatId: number) {
-    setChatInit((s) => ({ chatId, seed: s.seed + 1 }))
-    setTab('chats')
+    navigate(`/chats?open=${chatId}`)
   }
-
   // «Написать» по офферу: авторизован → внутренний чат; нет — внешний контакт.
   async function contactByListing(listingId: number, fallbackContact: string) {
-    if (!auth) {
-      window.open(fallbackContact, '_blank')
-      return
-    }
+    if (!auth) { window.open(fallbackContact, '_blank'); return }
     try {
       const conv = await openChat(listingId)
-      setProductId(null)
       goChat(conv.id)
-    } catch (e) {
-      alert((e as Error).message)
-    }
+    } catch (e) { alert((e as Error).message) }
   }
-
-  function openProduct(modelId: number) {
-    setProductId(modelId)
-    window.scrollTo(0, 0)
-  }
-
   async function onLogout() {
     await logout()
     setAuth(null)
     setUnread(0)
-    setTab('home')
+    navigate('/')
   }
 
   const authed = !!auth
   const unreadBadge = (
-    <span style={{ background: 'var(--accent)', color: 'var(--on-accent)', fontSize: 11, fontWeight: 700, borderRadius: 10, padding: '0 6px' }}>
-      {unread}
-    </span>
+    <span style={{ background: 'var(--accent)', color: 'var(--on-accent)', fontSize: 11, fontWeight: 700, borderRadius: 10, padding: '0 6px' }}>{unread}</span>
   )
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <header style={{ borderBottom: '1px solid var(--glass-brd)', position: 'sticky', top: 0, background: 'var(--glass-bg)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', zIndex: 50 }}>
         <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 16, height: 58 }}>
-          <div className="display" style={{ fontSize: 15, cursor: 'pointer', flexShrink: 0, letterSpacing: '0.02em' }} onClick={() => { setProductId(null); setTab('home') }}>
+          <div className="display" style={{ fontSize: 15, cursor: 'pointer', flexShrink: 0, letterSpacing: '0.02em' }} onClick={() => navigate('/')}>
             <span>SEARCH</span>
             <span style={{ color: 'var(--text-3)' }}>APP</span>
           </div>
@@ -194,7 +196,7 @@ export default function App() {
                   key={n.id}
                   className={tab === n.id ? 'btn btn-sm' : 'btn btn-sm btn-ghost'}
                   style={tab === n.id ? { background: 'var(--bg-elev)' } : undefined}
-                  onClick={() => { setProductId(null); setTab(n.id) }}
+                  onClick={() => navigate(n.path)}
                 >
                   {n.label}
                   {n.id === 'chats' && unread > 0 && unreadBadge}
@@ -204,12 +206,10 @@ export default function App() {
           )}
           <div style={{ flexShrink: 0, marginLeft: 'auto' }}>
             {authChecked && !authed && (
-              <button className="btn btn-vk btn-sm" onClick={() => setTab('profile')}>
-                Войти
-              </button>
+              <button className="btn btn-vk btn-sm" onClick={() => navigate('/profile')}>Войти</button>
             )}
             {authed && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={() => setTab('profile')} title="профиль">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={() => navigate('/profile')} title="профиль">
                 {auth.photo ? (
                   <img src={auth.photo} alt="" style={{ width: 30, height: 30, borderRadius: '50%' }} />
                 ) : (
@@ -228,32 +228,25 @@ export default function App() {
       </header>
 
       <main style={{ maxWidth: 1080, margin: '0 auto', padding: `0 16px ${isDesktop ? 48 : 108}px`, width: '100%', flex: 1 }}>
-        {productId != null && (
-          <ProductPage
-            modelId={productId}
-            onBack={() => setProductId(null)}
-            onContact={contactByListing}
-            onLeaveRequest={() => { setProductId(null); setTab('requests') }}
-          />
-        )}
-        {productId == null && tab === 'home' && <HomePage onSearch={goSearch} onOpenProduct={openProduct} onGoRequests={() => setTab('requests')} />}
-        {productId == null && tab === 'search' && (
-          <SearchPage key={searchInit.seed} initialQ={searchInit.q} initialCategorySlug={searchInit.categorySlug} onOpenProduct={openProduct} />
-        )}
-        {productId == null && tab === 'requests' && <RequestsPage meId={auth?.id ?? null} onOpenChat={goChat} onNeedAuth={() => setTab('profile')} />}
-        {productId == null && tab === 'chats' &&
-          (authed ? <ChatsPage key={chatInit.seed} meId={auth.id} initialChatId={chatInit.chatId} /> : <LoginGate what="Раздел «Чаты»" />)}
-        {productId == null && tab === 'seller' && (authed ? <SellerPage /> : <LoginGate what="Раздел «Мой сток»" />)}
-        {productId == null && tab === 'analytics' && (authed ? <AnalyticsPage /> : <LoginGate what="Аналитика спроса" />)}
-        {productId == null && tab === 'profile' && (authed ? <ProfilePage auth={auth} onLogout={onLogout} onOpenChat={goChat} onOpenAnalytics={() => setTab('analytics')} /> : <LoginGate what="Раздел «Профиль»" />)}
-        {productId == null && tab === 'admin' && <AdminPage />}
+        <Suspense fallback={PageFallback}>
+          <Routes>
+            <Route path="/" element={<HomePage onSearch={goSearch} onOpenProduct={openProduct} onGoRequests={() => navigate('/requests')} />} />
+            <Route path="/catalog" element={<CatalogRoute onOpenProduct={openProduct} />} />
+            <Route path="/product/:id" element={<ProductRoute onContact={contactByListing} />} />
+            <Route path="/requests" element={<RequestsPage meId={auth?.id ?? null} onOpenChat={goChat} onNeedAuth={() => navigate('/profile')} />} />
+            <Route path="/chats" element={<Gate authed={authed} authChecked={authChecked} what="Раздел «Чаты»">{auth && <ChatsRoute meId={auth.id} />}</Gate>} />
+            <Route path="/seller" element={<Gate authed={authed} authChecked={authChecked} what="Раздел «Мой сток»"><SellerPage /></Gate>} />
+            <Route path="/analytics" element={<Gate authed={authed} authChecked={authChecked} what="Аналитика спроса"><AnalyticsPage /></Gate>} />
+            <Route path="/profile" element={<Gate authed={authed} authChecked={authChecked} what="Раздел «Профиль»">{auth && <ProfilePage auth={auth} onLogout={onLogout} onOpenChat={goChat} onOpenAnalytics={() => navigate('/analytics')} />}</Gate>} />
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </main>
 
       {isDesktop && (
         <footer style={{ borderTop: '1px solid var(--border)', padding: '18px 16px', textAlign: 'center' }}>
-          <span className="text-3" style={{ fontSize: 12 }}>
-            Search-app — агрегатор стока реселлеров. Сделки и оплата — напрямую между пользователями.
-          </span>
+          <span className="text-3" style={{ fontSize: 12 }}>Search-app — агрегатор стока реселлеров. Сделки и оплата — напрямую между пользователями.</span>
         </footer>
       )}
 
@@ -261,73 +254,29 @@ export default function App() {
         <nav
           ref={bottomNavRef}
           style={{
-            position: 'fixed',
-            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 14px)',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: 'min(430px, calc(100% - 24px))',
-            background: 'var(--glass-bg)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            border: '1px solid var(--border-strong)',
-            borderRadius: 24,
-            boxShadow: 'var(--shadow-3)',
-            display: 'grid',
-            gridTemplateColumns: `repeat(${MOBILE_TABS.length}, 1fr)`,
-            padding: 7,
-            gap: 2,
-            zIndex: 60,
+            position: 'fixed', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 14px)', left: '50%', transform: 'translateX(-50%)',
+            width: 'min(430px, calc(100% - 24px))', background: 'var(--glass-bg)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid var(--border-strong)', borderRadius: 24, boxShadow: 'var(--shadow-3)', display: 'grid',
+            gridTemplateColumns: `repeat(${MOBILE_TABS.length}, 1fr)`, padding: 7, gap: 2, zIndex: 60,
           }}
         >
           {pill && (
-            <div
-              aria-hidden
-              style={{
-                position: 'absolute',
-                left: 0,
-                top: 0,
-                width: pill.w,
-                height: pill.h,
-                transform: `translate(${pill.x}px, ${pill.y}px)`,
-                background: 'var(--accent-dim)',
-                borderRadius: 17,
-                transition: 'transform 0.34s var(--ease), width 0.34s var(--ease)',
-                pointerEvents: 'none',
-                zIndex: 0,
-              }}
-            />
+            <div aria-hidden style={{ position: 'absolute', left: 0, top: 0, width: pill.w, height: pill.h, transform: `translate(${pill.x}px, ${pill.y}px)`, background: 'var(--accent-dim)', borderRadius: 17, transition: 'transform 0.34s var(--ease), width 0.34s var(--ease)', pointerEvents: 'none', zIndex: 0 }} />
           )}
           {MOBILE_TABS.map((t) => {
             const active = tab === t.id
             return (
               <button
                 key={t.id}
-                onClick={() => { setProductId(null); setTab(t.id) }}
+                onClick={() => navigate(t.path)}
                 aria-label={t.label}
                 aria-current={active ? 'page' : undefined}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  borderRadius: 17,
-                  padding: '10px 0 8px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 3,
-                  cursor: 'pointer',
-                  color: active ? 'var(--accent)' : 'var(--text-3)',
-                  position: 'relative',
-                  zIndex: 1,
-                  fontFamily: 'inherit',
-                  transition: 'color 0.2s var(--ease)',
-                }}
+                style={{ background: 'transparent', border: 'none', borderRadius: 17, padding: '10px 0 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer', color: active ? 'var(--accent)' : 'var(--text-3)', position: 'relative', zIndex: 1, fontFamily: 'inherit', transition: 'color 0.2s var(--ease)' }}
               >
                 <TabIcon tab={t.id} />
                 <span style={{ fontSize: 10.5, fontWeight: active ? 700 : 500 }}>{t.label}</span>
                 {t.id === 'chats' && unread > 0 && (
-                  <span style={{ position: 'absolute', top: 3, left: 'calc(50% + 7px)', background: 'var(--accent)', color: 'var(--on-accent)', fontSize: 10, fontWeight: 700, borderRadius: 9, padding: '0 5px', lineHeight: '15px' }}>
-                    {unread}
-                  </span>
+                  <span style={{ position: 'absolute', top: 3, left: 'calc(50% + 7px)', background: 'var(--accent)', color: 'var(--on-accent)', fontSize: 10, fontWeight: 700, borderRadius: 9, padding: '0 5px', lineHeight: '15px' }}>{unread}</span>
                 )}
               </button>
             )
@@ -336,4 +285,24 @@ export default function App() {
       )}
     </div>
   )
+}
+
+// Каталог: q/cat из URL (seed для начального состояния SearchPage).
+function CatalogRoute({ onOpenProduct }: { onOpenProduct: (id: number) => void }) {
+  const [sp] = useSearchParams()
+  return <SearchPage key={sp.toString()} initialQ={sp.get('q') || undefined} initialCategorySlug={sp.get('cat') || undefined} onOpenProduct={onOpenProduct} />
+}
+
+// Страница товара: id из URL; «назад» — history back.
+function ProductRoute({ onContact }: { onContact: (listingId: number, contact: string) => void }) {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  return <ProductPage modelId={Number(id)} onBack={() => navigate(-1)} onContact={onContact} onLeaveRequest={() => navigate('/requests')} />
+}
+
+// Чаты: открытый диалог из ?open=.
+function ChatsRoute({ meId }: { meId: number }) {
+  const [sp] = useSearchParams()
+  const open = sp.get('open')
+  return <ChatsPage key={open || 'list'} meId={meId} initialChatId={open ? Number(open) : undefined} />
 }
