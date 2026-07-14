@@ -122,34 +122,53 @@ export function AdminModelCards() {
             </div>
 
             {editId === m.id && (
-              <div style={{ marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 12, display: 'grid', gap: 8 }}>
-                <div>
-                  <span className="label" style={{ marginTop: 0 }}>Название</span>
-                  <input className="input" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div style={{ marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 240px) 1fr', gap: 18, alignItems: 'start' }}>
+                  {/* слева — фото */}
                   <div>
-                    <span className="label" style={{ marginTop: 0 }}>Артикул</span>
-                    <input className="input" value={draft.sku} onChange={(e) => setDraft({ ...draft, sku: e.target.value })} placeholder="adidas B75806" />
+                    <div style={{ aspectRatio: '1 / 1', borderRadius: 12, background: 'var(--bg-elev)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                      {draft.imageUrl ? (
+                        <img src={draft.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <span className="display text-3" style={{ fontSize: 40 }}>{m.brand.name.slice(0, 1)}</span>
+                      )}
+                    </div>
+                    <PhotoPicker value={draft.imageUrl} onChange={(url) => setDraft({ ...draft, imageUrl: url })} />
                   </div>
-                  <div>
-                    <span className="label" style={{ marginTop: 0 }}>Категория</span>
-                    <select className="select" value={draft.categoryId} onChange={(e) => setDraft({ ...draft, categoryId: Number(e.target.value) })}>
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id}>{c.parentId ? '— ' : ''}{c.name}</option>
-                      ))}
-                    </select>
+
+                  {/* справа — данные */}
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    <div>
+                      <span className="label" style={{ marginTop: 0 }}>Бренд</span>
+                      <div className="input" style={{ display: 'flex', alignItems: 'center', color: 'var(--text-2)', background: 'var(--bg)' }}>{m.brand.name}</div>
+                    </div>
+                    <div>
+                      <span className="label" style={{ marginTop: 0 }}>Название модели</span>
+                      <input className="input" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div>
+                        <span className="label" style={{ marginTop: 0 }}>Артикул (заводской)</span>
+                        <input className="input" value={draft.sku} onChange={(e) => setDraft({ ...draft, sku: e.target.value })} placeholder="adidas B75806" />
+                      </div>
+                      <div>
+                        <span className="label" style={{ marginTop: 0 }}>Категория</span>
+                        <select className="select" value={draft.categoryId} onChange={(e) => setDraft({ ...draft, categoryId: Number(e.target.value) })}>
+                          {categories.map((c) => (
+                            <option key={c.id} value={c.id}>{c.parentId ? '— ' : ''}{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="label" style={{ marginTop: 0 }}>Алиасы (через запятую)</span>
+                      <input className="input" value={draft.aliases} onChange={(e) => setDraft({ ...draft, aliases: e.target.value })} placeholder="самба, samba og" />
+                      <div className="hint">Народные написания и сокращения — по ним товар находят в поиске.</div>
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <span className="label" style={{ marginTop: 0 }}>Алиасы (через запятую)</span>
-                  <input className="input" value={draft.aliases} onChange={(e) => setDraft({ ...draft, aliases: e.target.value })} placeholder="самба, samba og" />
-                </div>
-                <div>
-                  <span className="label" style={{ marginTop: 0 }}>Фото модели</span>
-                  <PhotoPicker value={draft.imageUrl} onChange={(url) => setDraft({ ...draft, imageUrl: url })} />
-                </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
                   {m.status === 'pending' ? (
                     <button className="btn btn-primary btn-sm" onClick={() => save(m, { status: 'verified' })}>Сохранить и подтвердить</button>
                   ) : (

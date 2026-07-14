@@ -26,6 +26,7 @@ export function AdminPage() {
   const [mImage, setMImage] = useState('')
   const [dirMsg, setDirMsg] = useState('')
   const [resetKey, setResetKey] = useState(0)
+  const [section, setSection] = useState<'cards' | 'sellers' | 'directory'>('cards')
 
 
   function loadSellers() {
@@ -82,6 +83,13 @@ export function AdminPage() {
       <h1 className="page-title">Админ</h1>
       {error && <div className="text-danger" style={{ fontSize: 13, marginTop: 8 }}>{error}</div>}
 
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '14px 0 4px' }}>
+        <button className={section === 'cards' ? 'chip chip-active' : 'chip'} onClick={() => setSection('cards')}>Карточки моделей</button>
+        <button className={section === 'sellers' ? 'chip chip-active' : 'chip'} onClick={() => setSection('sellers')}>Продавцы</button>
+        <button className={section === 'directory' ? 'chip chip-active' : 'chip'} onClick={() => setSection('directory')}>Справочник</button>
+      </div>
+
+      {section === 'sellers' && (<>
       <div className="section-title">Продавцы ({sellers.length})</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 10 }}>
         {sellers.map((s) => {
@@ -112,7 +120,9 @@ export function AdminPage() {
           )
         })}
       </div>
+      </>)}
 
+      {section === 'directory' && (<>
       <div className="section-title">Справочник</div>
       {dirMsg && (
         <div className={dirMsg.includes('добавлен') ? 'text-success' : 'text-danger'} style={{ fontSize: 13, marginBottom: 8 }}>
@@ -164,8 +174,9 @@ export function AdminPage() {
           </button>
         </div>
       </div>
+      </>)}
 
-      <AdminModelCards />
+      {section === 'cards' && <AdminModelCards />}
     </div>
   )
 }
