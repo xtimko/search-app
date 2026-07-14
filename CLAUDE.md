@@ -113,6 +113,7 @@
 ## 6. Связанные документы
 
 - `docs/STATUS.md` — текущий статус, задачи, прогресс
+- `docs/ROADMAP.md` — план «до уровня StockX» (7 фаз, выполняем по одной)
 - `docs/DECISIONS.md` — журнал принятых решений
 - `docs/ARCHITECTURE.md` — структура данных и устройство модулей
 - `docs/DEPLOY.md` — инструкция деплоя (Vercel + Railway) + регистрация Mini App
