@@ -65,6 +65,10 @@ model Model {
   sku        String? // заводской артикул бренда (напр. adidas B75806)
   status     ModelStatus @default(verified)
   imageUrl   String? // каталожное фото модели (подставляется в выдаче, если у объявления нет своего)
+  colorway    String? // флагманская расцветка (соответствует sku)
+  retailPrice Int? // ритейл-цена в рублях (вводит админ; официального ритейла в РФ нет)
+  releaseYear Int? // год выпуска силуэта (у силуэта нет одной даты релиза расцветки)
+  description String? // короткое описание модели для страницы товара
   listings   Listing[]
   requests   Request[]
   searchLogs SearchLog[]

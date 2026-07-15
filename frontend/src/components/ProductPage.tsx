@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchProduct, offerSize, type ProductData, type Offer } from '../api/catalog'
+import { fetchProduct, offerSize, retailDiscount, type ProductData, type Offer } from '../api/catalog'
 import { SellerModal } from './SellerModal'
 
 // Страница товара (как StockX): фото + сводка, размеры с мин. ценой, офферы.
@@ -57,6 +57,14 @@ export function ProductPage({
     )
 
   const m = data.model
+  const minPrice = data.offers.length ? Math.min(...data.offers.map((o) => o.price)) : null
+  const discount = retailDiscount(minPrice, m.retailPrice)
+  // Паспорт модели: пары «метка → значение» для блока «Детали товара».
+  const details: [string, string][] = []
+  if (m.sku) details.push(['Артикул', m.sku])
+  if (m.colorway) details.push(['Расцветка', m.colorway])
+  if (m.retailPrice != null) details.push(['Ритейл-цена', `${m.retailPrice.toLocaleString('ru-RU')} ₽`])
+  if (m.releaseYear != null) details.push(['Год релиза', String(m.releaseYear)])
   return (
     <div style={{ paddingTop: 16 }} className="fade-up">
       <button className="btn btn-ghost btn-sm" onClick={onBack}>← Каталог</button>
@@ -73,12 +81,13 @@ export function ProductPage({
         <div>
           <div className="text-3" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.brand.name} · {m.category.name}</div>
           <h1 className="page-title" style={{ marginTop: 4 }}>{m.name}</h1>
-          {m.sku && <div className="text-3" style={{ fontSize: 12, marginTop: 4 }}>Артикул: {m.sku}</div>}
+          {m.colorway && <div className="text-2" style={{ fontSize: 13, marginTop: 4 }}>{m.colorway}</div>}
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
             <div style={{ background: 'var(--bg-elev)', borderRadius: 10, padding: '10px 14px' }}>
-              <div style={{ fontWeight: 800, fontSize: 16 }} className="tnum">
-                {data.offers.length ? `от ${Math.min(...data.offers.map((o) => o.price)).toLocaleString('ru-RU')} ₽` : '—'}
+              <div style={{ fontWeight: 800, fontSize: 16, display: 'flex', alignItems: 'baseline', gap: 8 }} className="tnum">
+                {minPrice != null ? `от ${minPrice.toLocaleString('ru-RU')} ₽` : '—'}
+                {discount && <span className="text-success" style={{ fontSize: 12, fontWeight: 700 }} title="мин. цена ниже ритейла">−{discount}% от ритейла</span>}
               </div>
               <div className="text-3" style={{ fontSize: 11 }}>{data.offers.length} в наличии</div>
             </div>
@@ -119,6 +128,27 @@ export function ProductPage({
           )}
         </div>
       </div>
+
+      {(details.length > 0 || m.description) && (
+        <>
+          <div className="section-title">Детали товара</div>
+          <div className="card">
+            {details.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+                {details.map(([label, value]) => (
+                  <div key={label}>
+                    <div className="text-3" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+                    <div className="tnum" style={{ fontWeight: 700, fontSize: 14, marginTop: 2 }}>{value}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {m.description && (
+              <p className="text-2" style={{ fontSize: 13, lineHeight: 1.6, margin: details.length > 0 ? '12px 0 0' : 0 }}>{m.description}</p>
+            )}
+          </div>
+        </>
+      )}
 
       {shown.length > 0 && (
         <>

@@ -69,6 +69,10 @@ export interface AdminModel {
   sku: string | null
   status: 'verified' | 'pending'
   imageUrl: string | null
+  colorway: string | null
+  retailPrice: number | null
+  releaseYear: number | null
+  description: string | null
   aliases: string[]
   categoryId: number
   brand: { id: number; name: string }
@@ -85,7 +89,13 @@ export async function fetchAdminModels(params: { status?: 'pending' | 'verified'
   return res.json()
 }
 
-export async function updateModel(id: number, patch: Partial<{ name: string; sku: string; categoryId: number; aliases: string[]; imageUrl: string; status: 'verified' | 'pending' }>) {
+export async function updateModel(
+  id: number,
+  patch: Partial<{
+    name: string; sku: string; categoryId: number; aliases: string[]; imageUrl: string; status: 'verified' | 'pending'
+    colorway: string; retailPrice: number | null; releaseYear: number | null; description: string
+  }>,
+) {
   const res = await fetch(`/api/admin/models/${id}`, { method: 'PATCH', headers: headers(), body: JSON.stringify(patch) })
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as { error?: string }).error || `HTTP ${res.status}`) }
   return res.json()

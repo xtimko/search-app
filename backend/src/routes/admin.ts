@@ -90,6 +90,10 @@ export async function adminRoutes(app: FastifyInstance) {
     sku: true,
     status: true,
     imageUrl: true,
+    colorway: true,
+    retailPrice: true,
+    releaseYear: true,
+    description: true,
     aliases: true,
     categoryId: true,
     brand: { select: { id: true, name: true } },
@@ -113,10 +117,14 @@ export async function adminRoutes(app: FastifyInstance) {
   })
 
   // PATCH /api/admin/models/:id — правка карточки: имя, артикул, категория,
-  // алиасы, фото, статус (verify/pending). Передаём только меняемые поля.
+  // алиасы, фото, статус (verify/pending), паспорт (расцветка/ритейл/год/описание).
+  // Передаём только меняемые поля.
   app.patch<{ Params: { id: string } }>('/api/admin/models/:id', async (req, reply) => {
     const id = Number(req.params.id)
-    const b = (req.body ?? {}) as { name?: string; sku?: string; categoryId?: number; aliases?: string[]; imageUrl?: string; status?: string }
+    const b = (req.body ?? {}) as {
+      name?: string; sku?: string; categoryId?: number; aliases?: string[]; imageUrl?: string; status?: string
+      colorway?: string; retailPrice?: number | null; releaseYear?: number | null; description?: string
+    }
     const model = await prisma.model.findUnique({ where: { id }, select: { id: true } })
     if (!model) return reply.code(404).send({ error: 'модель не найдена' })
 
@@ -128,6 +136,18 @@ export async function adminRoutes(app: FastifyInstance) {
     }
     if (b.sku !== undefined) data.sku = b.sku.trim().slice(0, 40) || null
     if (b.imageUrl !== undefined) data.imageUrl = b.imageUrl.trim().slice(0, 500) || null
+    if (b.colorway !== undefined) data.colorway = b.colorway.trim().slice(0, 120) || null
+    if (b.description !== undefined) data.description = b.description.trim().slice(0, 2000) || null
+    if (b.retailPrice !== undefined) {
+      const p = b.retailPrice === null ? null : Math.round(Number(b.retailPrice))
+      if (p !== null && (!Number.isFinite(p) || p <= 0 || p > 100_000_000)) return reply.code(400).send({ error: 'ритейл-цена: положительное число в рублях' })
+      data.retailPrice = p
+    }
+    if (b.releaseYear !== undefined) {
+      const y = b.releaseYear === null ? null : Math.round(Number(b.releaseYear))
+      if (y !== null && (!Number.isFinite(y) || y < 1900 || y > new Date().getFullYear() + 1)) return reply.code(400).send({ error: 'год релиза: 1900…следующий год' })
+      data.releaseYear = y
+    }
     if (b.categoryId !== undefined) {
       if (!(await prisma.category.count({ where: { id: b.categoryId } }))) return reply.code(400).send({ error: 'категория не найдена' })
       data.categoryId = b.categoryId

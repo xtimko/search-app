@@ -6,8 +6,19 @@ export interface CatalogModel {
   sku: string | null
   status?: 'verified' | 'pending'
   imageUrl: string | null
+  retailPrice?: number | null // паспорт: есть в списке и на PDP (бейдж «−N% от ритейла»)
+  colorway?: string | null // паспорт: только на PDP
+  releaseYear?: number | null // паспорт: только на PDP
+  description?: string | null // паспорт: только на PDP
   brand: { name: string }
   category: { name: string; slug: string }
+}
+
+// Скидка от ритейла в % (целое ≥1), если мин. цена ниже ритейла; иначе null.
+export function retailDiscount(minPrice: number | null | undefined, retailPrice: number | null | undefined): number | null {
+  if (minPrice == null || retailPrice == null || retailPrice <= 0 || minPrice >= retailPrice) return null
+  const d = Math.round((1 - minPrice / retailPrice) * 100)
+  return d >= 1 ? d : null
 }
 
 export interface CatalogItem {

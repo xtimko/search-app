@@ -12,7 +12,8 @@ export function AdminModelCards() {
   const [models, setModels] = useState<AdminModel[]>([])
   const [loading, setLoading] = useState(true)
   const [editId, setEditId] = useState(0)
-  const [draft, setDraft] = useState<{ name: string; sku: string; categoryId: number; aliases: string; imageUrl: string }>({ name: '', sku: '', categoryId: 0, aliases: '', imageUrl: '' })
+  const emptyDraft = { name: '', sku: '', categoryId: 0, aliases: '', imageUrl: '', colorway: '', retailPrice: '', releaseYear: '', description: '' }
+  const [draft, setDraft] = useState<typeof emptyDraft>(emptyDraft)
   const [msg, setMsg] = useState('')
 
   function load() {
@@ -33,7 +34,17 @@ export function AdminModelCards() {
   function startEdit(m: AdminModel) {
     setEditId(m.id)
     setMsg('')
-    setDraft({ name: m.name, sku: m.sku ?? '', categoryId: m.categoryId, aliases: m.aliases.join(', '), imageUrl: m.imageUrl ?? '' })
+    setDraft({
+      name: m.name,
+      sku: m.sku ?? '',
+      categoryId: m.categoryId,
+      aliases: m.aliases.join(', '),
+      imageUrl: m.imageUrl ?? '',
+      colorway: m.colorway ?? '',
+      retailPrice: m.retailPrice != null ? String(m.retailPrice) : '',
+      releaseYear: m.releaseYear != null ? String(m.releaseYear) : '',
+      description: m.description ?? '',
+    })
   }
 
   async function save(m: AdminModel, extra?: { status?: 'verified' | 'pending' }) {
@@ -45,6 +56,10 @@ export function AdminModelCards() {
         categoryId: draft.categoryId,
         aliases: draft.aliases.split(',').map((x) => x.trim()).filter(Boolean),
         imageUrl: draft.imageUrl,
+        colorway: draft.colorway,
+        retailPrice: draft.retailPrice.trim() ? Number(draft.retailPrice) : null,
+        releaseYear: draft.releaseYear.trim() ? Number(draft.releaseYear) : null,
+        description: draft.description,
         ...extra,
       })
       setMsg(`Сохранено: ${m.brand.name} ${draft.name}`)
@@ -160,10 +175,29 @@ export function AdminModelCards() {
                         </select>
                       </div>
                     </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                      <div>
+                        <span className="label" style={{ marginTop: 0 }}>Расцветка</span>
+                        <input className="input" value={draft.colorway} onChange={(e) => setDraft({ ...draft, colorway: e.target.value })} placeholder="White/Black" />
+                      </div>
+                      <div>
+                        <span className="label" style={{ marginTop: 0 }}>Год релиза</span>
+                        <input className="input tnum" inputMode="numeric" value={draft.releaseYear} onChange={(e) => setDraft({ ...draft, releaseYear: e.target.value.replace(/\D/g, '').slice(0, 4) })} placeholder="2015" />
+                      </div>
+                      <div>
+                        <span className="label" style={{ marginTop: 0 }}>Ритейл, ₽</span>
+                        <input className="input tnum" inputMode="numeric" value={draft.retailPrice} onChange={(e) => setDraft({ ...draft, retailPrice: e.target.value.replace(/\D/g, '').slice(0, 8) })} placeholder="12990" />
+                      </div>
+                    </div>
                     <div>
                       <span className="label" style={{ marginTop: 0 }}>Алиасы (через запятую)</span>
                       <input className="input" value={draft.aliases} onChange={(e) => setDraft({ ...draft, aliases: e.target.value })} placeholder="самба, samba og" />
                       <div className="hint">Народные написания и сокращения — по ним товар находят в поиске.</div>
+                    </div>
+                    <div>
+                      <span className="label" style={{ marginTop: 0 }}>Описание (для страницы товара)</span>
+                      <textarea className="textarea" rows={3} value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="Короткий абзац: история модели, материалы, чем известна…" />
+                      <div className="hint">Расцветка/год/ритейл и описание показываются в блоке «Детали товара». Не уверен — оставь пустым.</div>
                     </div>
                   </div>
                 </div>
