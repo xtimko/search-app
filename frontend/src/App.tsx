@@ -5,6 +5,10 @@ import { SearchPage } from './components/SearchPage'
 import { LoginGate } from './components/LoginGate'
 import { fetchAuthMe, logout, type AuthUser } from './api/auth'
 import { openChat, fetchUnread } from './api/chats'
+import { HeaderSearch } from './components/HeaderSearch'
+import { TrendsBar } from './components/TrendsBar'
+import { fetchCategories, type Category } from './api/directory'
+import { fetchTopBrands } from './api/catalog'
 
 // Тяжёлые страницы — по требованию (code-splitting по маршрутам).
 const ProductPage = lazy(() => import('./components/ProductPage').then((m) => ({ default: m.ProductPage })))
@@ -18,15 +22,14 @@ const AnalyticsPage = lazy(() => import('./components/AnalyticsPage').then((m) =
 export type Tab = 'home' | 'search' | 'requests' | 'chats' | 'seller' | 'analytics' | 'profile' | 'admin'
 
 const NAV: { id: Tab; label: string; path: string }[] = [
-  { id: 'home', label: 'Главная', path: '/' },
-  { id: 'search', label: 'Поиск', path: '/catalog' },
   { id: 'requests', label: 'Запросы', path: '/requests' },
   { id: 'chats', label: 'Чаты', path: '/chats' },
-  { id: 'seller', label: 'Мой сток', path: '/seller' },
+  { id: 'seller', label: 'Сток', path: '/seller' },
   { id: 'analytics', label: 'Аналитика', path: '/analytics' },
-  { id: 'profile', label: 'Профиль', path: '/profile' },
   { id: 'admin', label: 'Админ', path: '/admin' },
 ]
+
+const CATEGORY_ORDER: Record<string, number> = { footwear: 0, apparel: 1 }
 
 const MOBILE_TABS: { id: Tab; label: string; path: string }[] = [
   { id: 'search', label: 'Поиск', path: '/catalog' },
@@ -109,6 +112,27 @@ export default function App() {
   const [auth, setAuth] = useState<AuthUser | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
   const [unread, setUnread] = useState(0)
+  const [cats, setCats] = useState<Category[]>([])
+  const [brandsOpen, setBrandsOpen] = useState(false)
+  const [topBrands, setTopBrands] = useState<{ id: number; name: string }[]>([])
+  const [mobileSearch, setMobileSearch] = useState(false)
+  const brandsRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    fetchCategories()
+      .then((c) => setCats(c.filter((x) => !x.parentId).sort((x, y) => (CATEGORY_ORDER[x.slug] ?? 9) - (CATEGORY_ORDER[y.slug] ?? 9) || x.name.localeCompare(y.name))))
+      .catch(() => {})
+    fetchTopBrands().then((r) => setTopBrands(r.results)).catch(() => {})
+  }, [])
+
+  // Закрытие меню «Бренды» по клику вне.
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (brandsRef.current && !brandsRef.current.contains(e.target as Node)) setBrandsOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [])
 
   // Заголовок вкладки браузера по маршруту.
   useEffect(() => {
@@ -183,14 +207,22 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <header style={{ borderBottom: '1px solid var(--glass-brd)', position: 'sticky', top: 0, background: 'var(--glass-bg)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', zIndex: 50 }}>
-        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 16, height: 58 }}>
+      <header style={{ position: 'sticky', top: 0, background: 'var(--glass-bg)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', zIndex: 50, borderBottom: '1px solid var(--glass-brd)' }}>
+        {/* строка 1: лого · глобальный поиск · разделы · аватар */}
+        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 14, height: 58 }}>
           <div className="display" style={{ fontSize: 15, cursor: 'pointer', flexShrink: 0, letterSpacing: '0.02em' }} onClick={() => navigate('/')}>
             <span>SEARCH</span>
             <span style={{ color: 'var(--text-3)' }}>APP</span>
           </div>
+
           {isDesktop && (
-            <nav style={{ display: 'flex', gap: 4, overflowX: 'auto', flex: 1 }}>
+            <div style={{ flex: 1, maxWidth: 430 }}>
+              <HeaderSearch onOpenProduct={openProduct} onSearch={(q) => goSearch(q)} />
+            </div>
+          )}
+
+          {isDesktop && (
+            <nav style={{ display: 'flex', gap: 2, marginLeft: 'auto' }}>
               {NAV.map((n) => (
                 <button
                   key={n.id}
@@ -204,7 +236,19 @@ export default function App() {
               ))}
             </nav>
           )}
-          <div style={{ flexShrink: 0, marginLeft: 'auto' }}>
+
+          {!isDesktop && (
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{ marginLeft: 'auto' }}
+              aria-label="поиск"
+              onClick={() => setMobileSearch(true)}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4.2-4.2" /></svg>
+            </button>
+          )}
+
+          <div style={{ flexShrink: 0 }}>
             {authChecked && !authed && (
               <button className="btn btn-vk btn-sm" onClick={() => navigate('/profile')}>Войти</button>
             )}
@@ -217,15 +261,68 @@ export default function App() {
                     {(auth.vkName || auth.nick).slice(0, 1).toUpperCase()}
                   </div>
                 )}
-                <span style={{ fontSize: 13, fontWeight: 600, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {auth.vkName || auth.nick}
-                  {auth.dev && <span className="text-3"> (dev)</span>}
-                </span>
+                {isDesktop && (
+                  <span style={{ fontSize: 13, fontWeight: 600, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {auth.vkName || auth.nick}
+                    {auth.dev && <span className="text-3"> (dev)</span>}
+                  </span>
+                )}
               </div>
             )}
           </div>
+
+          {/* мобильный поиск-оверлей поверх строки хедера */}
+          {!isDesktop && mobileSearch && (
+            <div style={{ position: 'absolute', inset: 0, background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px', zIndex: 5 }}>
+              <div style={{ flex: 1 }}>
+                <HeaderSearch autoFocus onOpenProduct={openProduct} onSearch={(q) => goSearch(q)} onClose={() => setMobileSearch(false)} />
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setMobileSearch(false)}>Отмена</button>
+            </div>
+          )}
         </div>
+
+        {/* строка 2 (десктоп): категории + Бренды */}
+        {isDesktop && (
+          <div style={{ borderTop: '1px solid var(--glass-brd)' }}>
+            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 4, height: 40 }}>
+              {cats.map((c) => (
+                <button
+                  key={c.id}
+                  className="btn btn-sm btn-ghost"
+                  style={{ minHeight: 30, fontSize: 13 }}
+                  onClick={() => goSearch(undefined, c.slug)}
+                >
+                  {c.name}
+                </button>
+              ))}
+              <div ref={brandsRef} style={{ position: 'relative' }}>
+                <button className="btn btn-sm btn-ghost" style={{ minHeight: 30, fontSize: 13 }} onClick={() => setBrandsOpen((v) => !v)} aria-expanded={brandsOpen}>
+                  Бренды <span style={{ fontSize: 10, opacity: 0.7 }}>{brandsOpen ? '▲' : '▼'}</span>
+                </button>
+                {brandsOpen && (
+                  <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, minWidth: 230, background: 'var(--bg-card)', border: '1px solid var(--border-strong)', borderRadius: 14, boxShadow: 'var(--shadow-3)', padding: 6, zIndex: 80, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                    {topBrands.map((b) => (
+                      <button
+                        key={b.id}
+                        className="btn btn-sm btn-ghost"
+                        style={{ justifyContent: 'flex-start', minHeight: 32, fontSize: 13 }}
+                        onClick={() => { setBrandsOpen(false); navigate(`/catalog?brand=${b.id}&bn=${encodeURIComponent(b.name)}`) }}
+                      >
+                        {b.name}
+                      </button>
+                    ))}
+                    {topBrands.length === 0 && <span className="text-3" style={{ fontSize: 12, padding: 8 }}>пока пусто</span>}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </header>
+
+      {/* полоска трендов (все устройства) */}
+      <TrendsBar onOpenProduct={openProduct} />
 
       <main style={{ maxWidth: 1080, margin: '0 auto', padding: `0 16px ${isDesktop ? 48 : 108}px`, width: '100%', flex: 1 }}>
         <Suspense fallback={PageFallback}>
@@ -290,7 +387,16 @@ export default function App() {
 // Каталог: q/cat из URL (seed для начального состояния SearchPage).
 function CatalogRoute({ onOpenProduct }: { onOpenProduct: (id: number) => void }) {
   const [sp] = useSearchParams()
-  return <SearchPage key={sp.toString()} initialQ={sp.get('q') || undefined} initialCategorySlug={sp.get('cat') || undefined} onOpenProduct={onOpenProduct} />
+  const brand = sp.get('brand')
+  return (
+    <SearchPage
+      key={sp.toString()}
+      initialQ={sp.get('q') || undefined}
+      initialCategorySlug={sp.get('cat') || undefined}
+      initialBrand={brand ? { id: Number(brand), name: sp.get('bn') || `бренд #${brand}` } : undefined}
+      onOpenProduct={onOpenProduct}
+    />
+  )
 }
 
 // Страница товара: id из URL; «назад» — history back.

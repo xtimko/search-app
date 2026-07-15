@@ -8,16 +8,18 @@ const CATEGORY_ORDER: Record<string, number> = { footwear: 0, apparel: 1 }
 interface Props {
   initialQ?: string
   initialCategorySlug?: string
+  initialBrand?: { id: number; name: string }
   onOpenProduct: (modelId: number) => void
 }
 
 // Каталог (как StockX): поиск → карточки моделей; клик — страница товара с офферами.
-export function SearchPage({ initialQ, initialCategorySlug, onOpenProduct }: Props) {
+export function SearchPage({ initialQ, initialCategorySlug, initialBrand, onOpenProduct }: Props) {
   const [q, setQ] = useState(initialQ ?? '')
   const [categories, setCategories] = useState<Category[]>([])
   const [category, setCategory] = useState(0)
   const [ready, setReady] = useState(false)
   const [sort, setSort] = useState('offers')
+  const [brand, setBrand] = useState(initialBrand ?? null)
   const [items, setItems] = useState<CatalogItem[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -43,7 +45,7 @@ export function SearchPage({ initialQ, initialCategorySlug, onOpenProduct }: Pro
   async function run() {
     setLoading(true)
     try {
-      const res = await fetchCatalog({ q: q.trim() || undefined, categoryId: category || undefined, sort })
+      const res = await fetchCatalog({ q: q.trim() || undefined, categoryId: category || undefined, brandId: brand?.id, sort })
       setItems(res.results)
     } catch {
       setItems([])
@@ -67,7 +69,7 @@ export function SearchPage({ initialQ, initialCategorySlug, onOpenProduct }: Pro
   useEffect(() => {
     if (ready) run()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, category, sort])
+  }, [ready, category, sort, brand])
 
   const subChips = childrenByParent[activeTop] ?? []
 
@@ -99,6 +101,14 @@ export function SearchPage({ initialQ, initialCategorySlug, onOpenProduct }: Pro
               {ch.name}
             </button>
           ))}
+        </div>
+      )}
+
+      {brand && (
+        <div style={{ marginTop: 10 }}>
+          <button className="chip chip-active" onClick={() => setBrand(null)} title="сбросить бренд">
+            {brand.name} ✕
+          </button>
         </div>
       )}
 

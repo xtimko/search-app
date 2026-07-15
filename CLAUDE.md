@@ -38,7 +38,9 @@
 | **Фронтенд** (Vite + React + TS) | `frontend/` |
 | — точка входа React | `frontend/src/main.tsx` |
 | — дизайн-система (Ice Monochrome: Unbounded+Onest (кириллица!), белый акцент, glow-поиск `.search-hero`, классы btn/chip/card/input/page-title) | `frontend/src/styles/theme.css` |
-| — оболочка: топбар (десктоп) + нижний таб-бар (мобайл), вкладки | `frontend/src/App.tsx` |
+| — оболочка: 2-строчный хедер (поиск в центре, категории+Бренды) + нижний таб-бар (мобайл) | `frontend/src/App.tsx` |
+| — глобальный поиск хедера с живыми подсказками (`/api/suggest`) | `frontend/src/components/HeaderSearch.tsx` |
+| — полоска «Сейчас ищут» под хедером (`/api/trends`) | `frontend/src/components/TrendsBar.tsx` |
 | — главная: hero-поиск, категории, горячие предложения, тизер запросов | `frontend/src/components/HomePage.tsx` |
 | — карточка товара в выдаче (поиск + главная) | `frontend/src/components/ResultCard.tsx` |
 | — каталог покупателя: поиск → карточки моделей | `frontend/src/components/SearchPage.tsx` |

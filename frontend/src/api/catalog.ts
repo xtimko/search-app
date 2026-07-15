@@ -56,10 +56,11 @@ async function getJson<T>(url: string): Promise<T> {
   return res.json()
 }
 
-export function fetchCatalog(params: { q?: string; categoryId?: number; sort?: string }): Promise<{ results: CatalogItem[] }> {
+export function fetchCatalog(params: { q?: string; categoryId?: number; brandId?: number; sort?: string }): Promise<{ results: CatalogItem[] }> {
   const p = new URLSearchParams()
   if (params.q) p.set('q', params.q)
   if (params.categoryId) p.set('categoryId', String(params.categoryId))
+  if (params.brandId) p.set('brandId', String(params.brandId))
   if (params.sort) p.set('sort', params.sort)
   return getJson(`/api/catalog?${p.toString()}`)
 }
@@ -71,4 +72,25 @@ export function fetchProduct(id: number): Promise<ProductData> {
 export function offerSize(o: { sizeUs: string | null; sizeEu: string | null; size: string | null }): string {
   if (o.sizeUs || o.sizeEu) return [o.sizeUs && `US ${o.sizeUs}`, o.sizeEu && `EU ${o.sizeEu}`].filter(Boolean).join(' / ')
   return o.size || 'один размер'
+}
+
+export interface Suggestion {
+  id: number
+  name: string
+  brand: string
+  photo: string | null
+  minPrice: number | null
+  offersCount: number
+}
+
+export function fetchSuggest(q: string): Promise<{ results: Suggestion[] }> {
+  return getJson(`/api/suggest?q=${encodeURIComponent(q)}`)
+}
+
+export function fetchTrends(): Promise<{ results: { id: number; label: string }[] }> {
+  return getJson('/api/trends')
+}
+
+export function fetchTopBrands(): Promise<{ results: { id: number; name: string; offersCount: number }[] }> {
+  return getJson('/api/brands/top')
 }

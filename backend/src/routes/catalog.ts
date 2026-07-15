@@ -10,9 +10,10 @@ const LIVE: Prisma.ListingWhereInput = { inStock: true, reserved: false, seller:
 export async function catalogRoutes(app: FastifyInstance) {
   // GET /api/catalog?q=&categoryId=&sort= — карточки моделей с агрегатами
   // (мин. цена, число офферов). С текстом — релевантный fuzzy-порядок.
-  app.get<{ Querystring: { q?: string; categoryId?: string; sort?: string } }>('/api/catalog', async (req) => {
+  app.get<{ Querystring: { q?: string; categoryId?: string; brandId?: string; sort?: string } }>('/api/catalog', async (req) => {
     const q = (req.query.q ?? '').trim()
     const categoryId = req.query.categoryId ? Number(req.query.categoryId) : undefined
+    const brandId = req.query.brandId ? Number(req.query.brandId) : undefined
     const sort = (req.query.sort ?? 'offers').toString()
 
     let scored: Map<number, number> | null = null
@@ -28,7 +29,7 @@ export async function catalogRoutes(app: FastifyInstance) {
     // Агрегаты офферов по моделям.
     const groups = await prisma.listing.groupBy({
       by: ['modelId'],
-      where: { ...LIVE, ...(scored ? { modelId: { in: [...scored.keys()] } } : {}), ...(catIds ? { model: { categoryId: { in: catIds } } } : {}) },
+      where: { ...LIVE, ...(scored ? { modelId: { in: [...scored.keys()] } } : {}), ...(catIds || brandId ? { model: { ...(catIds ? { categoryId: { in: catIds } } : {}), ...(brandId ? { brandId } : {}) } } : {}) },
       _min: { price: true },
       _count: true,
       _max: { createdAt: true },
@@ -38,7 +39,7 @@ export async function catalogRoutes(app: FastifyInstance) {
     // С текстовым запросом показываем и модели без офферов (спрос → доска «Ищу»).
     const ids = scored ? [...scored.keys()] : groups.map((g) => g.modelId)
     const models = await prisma.model.findMany({
-      where: { id: { in: ids }, ...(catIds ? { categoryId: { in: catIds } } : {}) },
+      where: { id: { in: ids }, ...(catIds ? { categoryId: { in: catIds } } : {}), ...(brandId ? { brandId } : {}) },
       select: {
         id: true, name: true, sku: true, status: true, imageUrl: true,
         brand: { select: { name: true } },
@@ -81,6 +82,80 @@ export async function catalogRoutes(app: FastifyInstance) {
     })
 
     return { results: items.slice(0, 60) }
+  })
+
+  // GET /api/suggest?q= — живые подсказки для глобального поиска (топ-5 моделей).
+  app.get<{ Querystring: { q?: string } }>('/api/suggest', async (req) => {
+    const q = (req.query.q ?? '').trim()
+    if (q.length < 2) return { results: [] }
+    const scored = await matchModels(q)
+    const ids = [...scored.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id]) => id)
+    if (!ids.length) return { results: [] }
+    const [models, groups, photos] = await Promise.all([
+      prisma.model.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, name: true, imageUrl: true, brand: { select: { name: true } } },
+      }),
+      prisma.listing.groupBy({ by: ['modelId'], where: { ...LIVE, modelId: { in: ids } }, _min: { price: true }, _count: true }),
+      prisma.listing.findMany({ where: { ...LIVE, modelId: { in: ids }, photo: { not: null } }, orderBy: { createdAt: 'desc' }, select: { modelId: true, photo: true } }),
+    ])
+    const agg = new Map(groups.map((g) => [g.modelId, g]))
+    const ph = new Map<number, string>()
+    for (const l of photos) if (l.photo && !ph.has(l.modelId)) ph.set(l.modelId, l.photo)
+    const byId = new Map(models.map((m) => [m.id, m]))
+    return {
+      results: ids
+        .map((id) => byId.get(id))
+        .filter((m): m is NonNullable<typeof m> => !!m)
+        .map((m) => ({
+          id: m.id,
+          name: m.name,
+          brand: m.brand.name,
+          photo: m.imageUrl ?? ph.get(m.id) ?? null,
+          minPrice: agg.get(m.id)?._min.price ?? null,
+          offersCount: agg.get(m.id)?._count ?? 0,
+        })),
+    }
+  })
+
+  // GET /api/trends — полоска «сейчас ищут»: топ моделей по поискам за 7 дней;
+  // при пустых логах — фолбэк на модели с наибольшим числом офферов.
+  app.get('/api/trends', async () => {
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    const logs = await prisma.searchLog.groupBy({
+      by: ['modelId'],
+      where: { createdAt: { gte: since }, modelId: { not: null } },
+      _count: true,
+      orderBy: { _count: { modelId: 'desc' } },
+      take: 8,
+    })
+    let ids = logs.map((l) => l.modelId as number)
+    if (ids.length < 4) {
+      const top = await prisma.listing.groupBy({ by: ['modelId'], where: LIVE, _count: true, orderBy: { _count: { modelId: 'desc' } }, take: 8 })
+      for (const t of top) if (!ids.includes(t.modelId)) ids.push(t.modelId)
+      ids = ids.slice(0, 8)
+    }
+    const models = await prisma.model.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, name: true, brand: { select: { name: true } } },
+    })
+    const byId = new Map(models.map((m) => [m.id, m]))
+    return { results: ids.map((id) => byId.get(id)).filter((m): m is NonNullable<typeof m> => !!m).map((m) => ({ id: m.id, label: `${m.brand.name} ${m.name}` })) }
+  })
+
+  // GET /api/brands/top — топ брендов по числу живых офферов (для меню «Бренды»).
+  app.get('/api/brands/top', async () => {
+    const rows = await prisma.$queryRaw<{ id: number; name: string; cnt: number }[]>`
+      SELECT b.id::int, b.name, count(l.id)::int AS cnt
+      FROM "Brand" b
+      JOIN "Model" m ON m."brandId" = b.id
+      JOIN "Listing" l ON l."modelId" = m.id AND l."inStock" AND NOT l.reserved
+      JOIN "Seller" s ON s.id = l."sellerId" AND s.status = 'approved'
+      GROUP BY b.id, b.name
+      ORDER BY cnt DESC
+      LIMIT 12
+    `
+    return { results: rows.map((r) => ({ id: Number(r.id), name: r.name, offersCount: Number(r.cnt) })) }
   })
 
   // GET /api/catalog/:id — страница товара: модель, офферы по размерам, последняя продажа, спрос.
