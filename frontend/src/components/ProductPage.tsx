@@ -166,7 +166,7 @@ export function ProductPage({
         <span className="text-3" aria-hidden>›</span>
         <Crumb onClick={() => navigate(`/catalog?cat=${m.category.slug}`)}>{m.category.name}</Crumb>
         <span className="text-3" aria-hidden>›</span>
-        <Crumb onClick={() => navigate(`/catalog?brand=${m.brand.id}&bn=${encodeURIComponent(m.brand.name)}`)}>{m.brand.name}</Crumb>
+        <Crumb onClick={() => navigate(`/brand/${m.brand.id}`)}>{m.brand.name}</Crumb>
         <span className="text-3" aria-hidden>›</span>
         <span className="text-2" style={{ flexShrink: 0 }}>{m.name}</span>
       </nav>

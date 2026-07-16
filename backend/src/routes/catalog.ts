@@ -26,34 +26,59 @@ export async function catalogRoutes(app: FastifyInstance) {
   // (мин. цена, число офферов). С текстом — релевантный fuzzy-порядок.
   // ?ids=1,2,3 — батч-режим: карточки ровно этих моделей в заданном порядке
   // (recently viewed на PDP; пригодится рядам главной).
-  app.get<{ Querystring: { q?: string; categoryId?: string; brandId?: string; sort?: string; ids?: string } }>('/api/catalog', async (req) => {
+  // Фильтры каталога-браузера: ?brands=1,2 (мультивыбор; легаси ?brandId=),
+  // ?size= (US/EU/буквенный), ?priceMin=&priceMax=, ?condition=new|used —
+  // применяются к ОФФЕРАМ: модель остаётся, только если есть подходящий живой
+  // оффер, а мин. цена/счётчик считаются по подходящим. Пагинация: ?offset=,
+  // страница 24, в ответе total.
+  app.get<{
+    Querystring: {
+      q?: string; categoryId?: string; brandId?: string; brands?: string; size?: string
+      priceMin?: string; priceMax?: string; condition?: string; sort?: string; ids?: string; offset?: string
+    }
+  }>('/api/catalog', async (req) => {
     const q = (req.query.q ?? '').trim()
     const categoryId = req.query.categoryId ? Number(req.query.categoryId) : undefined
-    const brandId = req.query.brandId ? Number(req.query.brandId) : undefined
     const sort = (req.query.sort ?? 'offers').toString()
+    const offset = Math.max(0, Number(req.query.offset) || 0)
+    const brandIds = [...(req.query.brands ?? '').split(','), req.query.brandId ?? '']
+      .map((s) => Number(s.trim()))
+      .filter((n) => Number.isInteger(n) && n > 0)
+    const size = (req.query.size ?? '').trim()
+    const priceMin = Number(req.query.priceMin) > 0 ? Number(req.query.priceMin) : undefined
+    const priceMax = Number(req.query.priceMax) > 0 ? Number(req.query.priceMax) : undefined
+    const condition = req.query.condition === 'new' || req.query.condition === 'used' ? req.query.condition : undefined
     const byIds = (req.query.ids ?? '')
       .split(',')
       .map((s) => Number(s.trim()))
       .filter((n) => Number.isInteger(n) && n > 0)
       .slice(0, 24)
 
+    const offerWhere: Prisma.ListingWhereInput = {
+      ...(size ? { OR: [{ sizeUs: { equals: size, mode: 'insensitive' } }, { sizeEu: { equals: size, mode: 'insensitive' } }, { size: { equals: size, mode: 'insensitive' } }] } : {}),
+      ...(priceMin || priceMax ? { price: { ...(priceMin ? { gte: priceMin } : {}), ...(priceMax ? { lte: priceMax } : {}) } } : {}),
+      ...(condition ? { condition } : {}),
+    }
+    const hasOfferFilters = Boolean(size || priceMin || priceMax || condition)
+
     let scored: Map<number, number> | null = null
     if (!byIds.length && q.length >= 2) {
       scored = await matchModels(q)
-      if (scored.size === 0) return { results: [] }
+      if (scored.size === 0) return { results: [], total: 0 }
     }
 
     const catIds = categoryId
       ? [categoryId, ...(await prisma.category.findMany({ where: { parentId: categoryId }, select: { id: true } })).map((c) => c.id)]
       : undefined
 
-    // Агрегаты офферов по моделям.
+    // Агрегаты офферов по моделям (с учётом офферных фильтров).
     const groups = await prisma.listing.groupBy({
       by: ['modelId'],
       where: {
         ...LIVE,
+        ...offerWhere,
         ...(byIds.length ? { modelId: { in: byIds } } : scored ? { modelId: { in: [...scored.keys()] } } : {}),
-        ...(catIds || brandId ? { model: { ...(catIds ? { categoryId: { in: catIds } } : {}), ...(brandId ? { brandId } : {}) } } : {}),
+        ...(catIds || brandIds.length ? { model: { ...(catIds ? { categoryId: { in: catIds } } : {}), ...(brandIds.length ? { brandId: { in: brandIds } } : {}) } } : {}),
       },
       _min: { price: true },
       _count: true,
@@ -61,10 +86,15 @@ export async function catalogRoutes(app: FastifyInstance) {
     })
     const aggByModel = new Map(groups.map((g) => [g.modelId, g]))
 
-    // С текстовым запросом (и в батч-режиме) показываем и модели без офферов.
-    const ids = byIds.length ? byIds : scored ? [...scored.keys()] : groups.map((g) => g.modelId)
+    // С текстовым запросом (и в батч-режиме) показываем и модели без офферов —
+    // но при офферных фильтрах оставляем только модели с подходящим оффером.
+    const ids = byIds.length
+      ? byIds
+      : scored
+        ? [...scored.keys()].filter((mid) => !hasOfferFilters || aggByModel.has(mid))
+        : groups.map((g) => g.modelId)
     const models = await prisma.model.findMany({
-      where: { id: { in: ids }, ...(catIds ? { categoryId: { in: catIds } } : {}), ...(brandId ? { brandId } : {}) },
+      where: { id: { in: ids }, ...(catIds ? { categoryId: { in: catIds } } : {}), ...(brandIds.length ? { brandId: { in: brandIds } } : {}) },
       select: {
         id: true, name: true, sku: true, status: true, imageUrl: true, retailPrice: true,
         brand: { select: { name: true } },
@@ -96,7 +126,8 @@ export async function catalogRoutes(app: FastifyInstance) {
       return b.offersCount - a.offersCount
     })
 
-    return { results: items.slice(0, 60) }
+    // Пагинация «Показать ещё»: страница 24 от offset + общий счётчик.
+    return { results: items.slice(offset, offset + 24), total: items.length }
   })
 
   // GET /api/suggest?q= — живые подсказки для глобального поиска (топ-5 моделей).
@@ -158,8 +189,10 @@ export async function catalogRoutes(app: FastifyInstance) {
     return { results: ids.map((id) => byId.get(id)).filter((m): m is NonNullable<typeof m> => !!m).map((m) => ({ id: m.id, label: `${m.brand.name} ${m.name}` })) }
   })
 
-  // GET /api/brands/top — топ брендов по числу живых офферов (для меню «Бренды»).
-  app.get('/api/brands/top', async () => {
+  // GET /api/brands/top?limit= — бренды с живыми офферами по убыванию числа
+  // офферов (меню «Бренды» — 12 по умолчанию; фильтр каталога берёт до 100).
+  app.get<{ Querystring: { limit?: string } }>('/api/brands/top', async (req) => {
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 12))
     const rows = await prisma.$queryRaw<{ id: number; name: string; cnt: number }[]>`
       SELECT b.id::int, b.name, count(l.id)::int AS cnt
       FROM "Brand" b
@@ -168,9 +201,21 @@ export async function catalogRoutes(app: FastifyInstance) {
       JOIN "Seller" s ON s.id = l."sellerId" AND s.status = 'approved'
       GROUP BY b.id, b.name
       ORDER BY cnt DESC
-      LIMIT 12
+      LIMIT ${limit}
     `
     return { results: rows.map((r) => ({ id: Number(r.id), name: r.name, offersCount: Number(r.cnt) })) }
+  })
+
+  // GET /api/brands/:id — шапка страницы бренда: имя + счётчики наличия.
+  app.get<{ Params: { id: string } }>('/api/brands/:id', async (req, reply) => {
+    const id = Number(req.params.id)
+    const brand = await prisma.brand.findUnique({ where: { id }, select: { id: true, name: true } })
+    if (!brand) return reply.code(404).send({ error: 'бренд не найден' })
+    const [offersCount, modelsInStock] = await Promise.all([
+      prisma.listing.count({ where: { ...LIVE, model: { brandId: id } } }),
+      prisma.model.count({ where: { brandId: id, listings: { some: LIVE } } }),
+    ])
+    return { id: brand.id, name: brand.name, offersCount, modelsInStock }
   })
 
   // GET /api/catalog/:id — страница товара: модель, офферы по размерам,

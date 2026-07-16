@@ -69,12 +69,29 @@ async function getJson<T>(url: string): Promise<T> {
   return res.json()
 }
 
-export function fetchCatalog(params: { q?: string; categoryId?: number; brandId?: number; sort?: string }): Promise<{ results: CatalogItem[] }> {
+export interface CatalogParams {
+  q?: string
+  categoryId?: number
+  brands?: number[] // мультивыбор брендов
+  size?: string // US/EU/буквенный — точное совпадение с оффером
+  priceMin?: number
+  priceMax?: number
+  condition?: 'new' | 'used'
+  sort?: string
+  offset?: number // пагинация «Показать ещё» (страница 24)
+}
+
+export function fetchCatalog(params: CatalogParams): Promise<{ results: CatalogItem[]; total: number }> {
   const p = new URLSearchParams()
   if (params.q) p.set('q', params.q)
   if (params.categoryId) p.set('categoryId', String(params.categoryId))
-  if (params.brandId) p.set('brandId', String(params.brandId))
+  if (params.brands?.length) p.set('brands', params.brands.join(','))
+  if (params.size) p.set('size', params.size)
+  if (params.priceMin) p.set('priceMin', String(params.priceMin))
+  if (params.priceMax) p.set('priceMax', String(params.priceMax))
+  if (params.condition) p.set('condition', params.condition)
   if (params.sort) p.set('sort', params.sort)
+  if (params.offset) p.set('offset', String(params.offset))
   return getJson(`/api/catalog?${p.toString()}`)
 }
 
@@ -110,6 +127,17 @@ export function fetchTrends(): Promise<{ results: { id: number; label: string }[
   return getJson('/api/trends')
 }
 
-export function fetchTopBrands(): Promise<{ results: { id: number; name: string; offersCount: number }[] }> {
-  return getJson('/api/brands/top')
+export function fetchTopBrands(limit?: number): Promise<{ results: { id: number; name: string; offersCount: number }[] }> {
+  return getJson(`/api/brands/top${limit ? `?limit=${limit}` : ''}`)
+}
+
+export interface BrandInfo {
+  id: number
+  name: string
+  offersCount: number
+  modelsInStock: number
+}
+
+export function fetchBrandInfo(id: number): Promise<BrandInfo> {
+  return getJson(`/api/brands/${id}`)
 }

@@ -43,7 +43,9 @@
 | — полоска «Сейчас ищут» под хедером (`/api/trends`) | `frontend/src/components/TrendsBar.tsx` |
 | — главная: hero-поиск, категории, горячие предложения, тизер запросов | `frontend/src/components/HomePage.tsx` |
 | — карточка товара в выдаче (поиск + главная) | `frontend/src/components/ResultCard.tsx` |
-| — каталог покупателя: поиск → карточки моделей | `frontend/src/components/SearchPage.tsx` |
+| — каталог-браузер: сайдбар/шит фильтров, чипы, пагинация «Показать ещё» | `frontend/src/components/SearchPage.tsx` |
+| — панель фильтров каталога (категории, бренды-мультивыбор, размер, цена, состояние) | `frontend/src/components/CatalogFilters.tsx` |
+| — страница бренда `/brand/:id`: шапка + каталог бренда | `frontend/src/components/BrandPage.tsx` |
 | — страница продавца: разделы Сток / Добавить / Импорт, вид таблица/карточки | `frontend/src/components/SellerPage.tsx` |
 | — компактная таблица стока (инлайн: цена, размеры, продано) | `frontend/src/components/StockTable.tsx` |
 | — раздел «Профиль»: VK-карточка + профиль продавца + задел рейтинга | `frontend/src/components/ProfilePage.tsx` |
@@ -66,7 +68,7 @@
 | — заголовки авторизации к API (`x-vk-user-id`) | `frontend/src/api/client.ts` |
 | — массовая загрузка (xlsx-шаблон, парсинг, preview/commit) | `frontend/src/components/ImportPanel.tsx` |
 | — клиент поиска (`/api/search`) | `frontend/src/api/search.ts` |
-| — каталог: `GET /api/catalog` (модели+агрегаты, `?ids=` батч), `GET /api/catalog/:id` (товар+офферы+sales+related), suggest/trends/brands-top | `backend/src/routes/catalog.ts` |
+| — каталог: `GET /api/catalog` (агрегаты; фильтры brands/size/price/condition; `?ids=` батч; offset+total), `GET /api/catalog/:id` (товар+офферы+sales+related), suggest/trends, `/api/brands/top`+`/api/brands/:id` | `backend/src/routes/catalog.ts` |
 | — клиент каталога | `frontend/src/api/catalog.ts` |
 | — карточка модели в каталоге | `frontend/src/components/ProductCard.tsx` |
 | — страница товара: крошки, офферы по размерам, график цен (SVG), «Детали товара» (паспорт), бейдж «−N% от ритейла», похожие, недавно смотрели | `frontend/src/components/ProductPage.tsx` |

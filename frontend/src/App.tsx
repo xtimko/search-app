@@ -18,6 +18,7 @@ const AdminPage = lazy(() => import('./components/AdminPage').then((m) => ({ def
 const ChatsPage = lazy(() => import('./components/ChatsPage').then((m) => ({ default: m.ChatsPage })))
 const RequestsPage = lazy(() => import('./components/RequestsPage').then((m) => ({ default: m.RequestsPage })))
 const AnalyticsPage = lazy(() => import('./components/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })))
+const BrandPage = lazy(() => import('./components/BrandPage').then((m) => ({ default: m.BrandPage })))
 
 export type Tab = 'home' | 'search' | 'requests' | 'chats' | 'seller' | 'analytics' | 'profile' | 'admin'
 
@@ -55,6 +56,7 @@ const TITLES: Record<string, string> = {
 function tabFromPath(pathname: string): Tab | null {
   if (pathname === '/') return 'home'
   if (pathname.startsWith('/catalog')) return 'search'
+  if (pathname.startsWith('/brand')) return 'search'
   if (pathname.startsWith('/requests')) return 'requests'
   if (pathname.startsWith('/chats')) return 'chats'
   if (pathname.startsWith('/seller')) return 'seller'
@@ -307,7 +309,7 @@ export default function App() {
                         key={b.id}
                         className="btn btn-sm btn-ghost"
                         style={{ justifyContent: 'flex-start', minHeight: 32, fontSize: 13 }}
-                        onClick={() => { setBrandsOpen(false); navigate(`/catalog?brand=${b.id}&bn=${encodeURIComponent(b.name)}`) }}
+                        onClick={() => { setBrandsOpen(false); navigate(`/brand/${b.id}`) }}
                       >
                         {b.name}
                       </button>
@@ -329,6 +331,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<HomePage onSearch={goSearch} onOpenProduct={openProduct} onGoRequests={() => navigate('/requests')} />} />
             <Route path="/catalog" element={<CatalogRoute onOpenProduct={openProduct} />} />
+            <Route path="/brand/:id" element={<BrandRoute onOpenProduct={openProduct} />} />
             <Route path="/product/:id" element={<ProductRoute onContact={contactByListing} />} />
             <Route path="/requests" element={<RequestsPage meId={auth?.id ?? null} onOpenChat={goChat} onNeedAuth={() => navigate('/profile')} />} />
             <Route path="/chats" element={<Gate authed={authed} authChecked={authChecked} what="Раздел «Чаты»">{auth && <ChatsRoute meId={auth.id} />}</Gate>} />
@@ -397,6 +400,12 @@ function CatalogRoute({ onOpenProduct }: { onOpenProduct: (id: number) => void }
       onOpenProduct={onOpenProduct}
     />
   )
+}
+
+// Страница бренда: id из URL.
+function BrandRoute({ onOpenProduct }: { onOpenProduct: (id: number) => void }) {
+  const { id } = useParams()
+  return <BrandPage key={id} brandId={Number(id)} onOpenProduct={onOpenProduct} />
 }
 
 // Страница товара: id из URL; «назад» — history back.
