@@ -4,6 +4,7 @@ import { HomePage } from './components/HomePage'
 import { SearchPage } from './components/SearchPage'
 import { LoginGate } from './components/LoginGate'
 import { fetchAuthMe, logout, type AuthUser } from './api/auth'
+import { initFavorites, setFavoritesUnauthorizedHandler } from './favorites'
 import { openChat, fetchUnread } from './api/chats'
 import { HeaderSearch } from './components/HeaderSearch'
 import { TrendsBar } from './components/TrendsBar'
@@ -164,7 +165,14 @@ export default function App() {
 
   useEffect(() => {
     fetchAuthMe().then(setAuth).finally(() => setAuthChecked(true))
+    setFavoritesUnauthorizedHandler(() => navigate('/profile')) // гость нажал сердце → гейт входа
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // «Слежу»: перезагрузить набор сердечек при входе/выходе.
+  useEffect(() => {
+    if (authChecked) initFavorites(!!auth)
+  }, [auth, authChecked])
 
   useEffect(() => {
     if (!auth) return

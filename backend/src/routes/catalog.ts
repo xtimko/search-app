@@ -23,7 +23,8 @@ async function photoFallback(modelIds: number[]): Promise<Map<number, string>> {
 
 // Карточки каталога по списку id: агрегаты живых офферов + фото-фолбэк,
 // порядок ids сохраняется, модели без живых офферов остаются (нулевые агрегаты).
-async function cardsByIds(ids: number[]) {
+// Экспорт — для «Слежу» (favorites.ts) и других списков карточек.
+export async function cardsByIds(ids: number[]) {
   if (!ids.length) return []
   const [groups, models] = await Promise.all([
     prisma.listing.groupBy({

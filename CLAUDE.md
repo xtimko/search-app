@@ -44,6 +44,8 @@
 | — главная: hero-поиск, промо-слот, ряды-карусели (`/api/home`), плитки брендов, тизер запросов | `frontend/src/components/HomePage.tsx` |
 | — горизонтальный ряд карточек (главная, PDP: похожие/недавние) | `frontend/src/components/CardRow.tsx` |
 | — карточка товара в выдаче (поиск + главная) | `frontend/src/components/ResultCard.tsx` |
+| — стор избранного «Слежу» (Set id, useSyncExternalStore, оптимистичный toggle) | `frontend/src/favorites.ts` |
+| — клиент избранного (`/api/favorites*`) | `frontend/src/api/favorites.ts` |
 | — каталог-браузер: сайдбар/шит фильтров, чипы, пагинация «Показать ещё» | `frontend/src/components/SearchPage.tsx` |
 | — панель фильтров каталога (категории, бренды-мультивыбор, размер, цена, состояние) | `frontend/src/components/CatalogFilters.tsx` |
 | — страница бренда `/brand/:id`: шапка + каталог бренда | `frontend/src/components/BrandPage.tsx` |
@@ -71,7 +73,7 @@
 | — клиент поиска (`/api/search`) | `frontend/src/api/search.ts` |
 | — каталог: `GET /api/catalog` (агрегаты; фильтры brands/size/price/condition; `?ids=` батч; offset+total), `GET /api/catalog/:id` (товар+офферы+sales+related), `GET /api/home` (ряды главной), suggest/trends, `/api/brands/top`+`/api/brands/:id` | `backend/src/routes/catalog.ts` |
 | — клиент каталога | `frontend/src/api/catalog.ts` |
-| — карточка модели в каталоге | `frontend/src/components/ProductCard.tsx` |
+| — карточка модели в каталоге + сердечко HeartButton | `frontend/src/components/ProductCard.tsx` |
 | — страница товара: крошки, офферы по размерам, график цен (SVG), «Детали товара» (паспорт), бейдж «−N% от ритейла», похожие, недавно смотрели | `frontend/src/components/ProductPage.tsx` |
 | — недавно просмотренные модели (localStorage, для PDP и главной) | `frontend/src/recent.ts` |
 | — клиент импорта (SheetJS) | `frontend/src/api/import.ts` |
@@ -95,6 +97,7 @@
 | — аналитика спроса (PRO): `/api/analytics/demand` (спрос/дефицит/продажи/unmet) | `backend/src/routes/analytics.ts` |
 | — подписанные сессии (httpOnly-cookie, HMAC) | `backend/src/session.ts` |
 | — ретро-атрибуция спроса: новые модели подхватывают старые «не нашли»-поиски | `backend/src/demand.ts` |
+| — «Слежу»: `GET/POST/DELETE /api/favorites*` (избранные модели, фундамент уведомлений) | `backend/src/routes/favorites.ts` |
 | — экземпляр Prisma Client | `backend/src/db.ts` |
 | — справочник: `GET /api/categories`/`brands`/`models` (поиск) + `POST /api/models` (своя модель) | `backend/src/routes/directory.ts` |
 | — эндпоинты стока: `POST`/`GET`/`PATCH`/`DELETE /api/listings` (пока от dev-продавца) | `backend/src/routes/listings.ts` |
@@ -102,7 +105,7 @@
 | — массовый импорт: `POST /api/import/preview`/`commit` | `backend/src/routes/import.ts` |
 | — профиль продавца: `GET`/`PATCH /api/seller/me` | `backend/src/routes/seller.ts` |
 | — админка: модерация + справочник + карточки моделей (`GET/POST/PATCH/DELETE /api/admin/models`) | `backend/src/routes/admin.ts` |
-| **Схема БД** (PostgreSQL): Category(дерево), Brand, Model(+sku/status/imageUrl+паспорт: colorway/retailPrice/releaseYear/description), Listing, Seller, Conversation, Message, Deal, Review, Request(+Response), SearchLog | `prisma/schema.prisma` |
+| **Схема БД** (PostgreSQL): Category(дерево), Brand, Model(+sku/status/imageUrl+паспорт: colorway/retailPrice/releaseYear/description), Listing, Seller, Favorite(«Слежу»), Conversation, Message, Deal, Review, Request(+Response), SearchLog | `prisma/schema.prisma` |
 | История миграций (init + catalog_revision) | `prisma/migrations/` |
 | Seed справочника (категории + бренды + модели, с алиасами) | `prisma/seed.ts` |
 | Анализ реального чата запросов (спрос, форматы) | `docs/research/vk_chat_analysis.md` |

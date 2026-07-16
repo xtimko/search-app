@@ -1,5 +1,33 @@
 import { useState } from 'react'
 import { retailDiscount, type CatalogItem } from '../api/catalog'
+import { useFavoritesVersion, isFavorite, toggleFavorite } from '../favorites'
+
+// Сердечко «Слежу» поверх фото карточки.
+export function HeartButton({ modelId, size = 30 }: { modelId: number; size?: number }) {
+  useFavoritesVersion()
+  const fav = isFavorite(modelId)
+  return (
+    <button
+      aria-pressed={fav}
+      aria-label={fav ? 'убрать из «Слежу»' : 'следить за моделью'}
+      title={fav ? 'убрать из «Слежу»' : 'следить за моделью'}
+      onClick={(e) => {
+        e.stopPropagation()
+        toggleFavorite(modelId)
+      }}
+      style={{
+        width: size, height: size, borderRadius: '50%', border: '1px solid var(--border-strong)',
+        background: 'var(--glass-bg)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0,
+        color: fav ? 'var(--danger)' : 'var(--text-2)', transition: 'color 0.15s, transform 0.15s',
+      }}
+    >
+      <svg width={size * 0.53} height={size * 0.53} viewBox="0 0 24 24" fill={fav ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round">
+        <path d="M12 20.7S4.5 16.3 2.4 11.6C.9 8.2 3 4.8 6.6 4.8c2.2 0 3.7 1.2 4.6 2.6.9-1.4 2.4-2.6 4.6-2.6 3.6 0 5.7 3.4 4.2 6.8C17.9 16.3 12 20.7 12 20.7z" />
+      </svg>
+    </button>
+  )
+}
 
 // Карточка модели в каталоге (как на StockX): фото, название, «от X ₽ · N офферов».
 export function ProductCard({ item, onOpen }: { item: CatalogItem; onOpen: (modelId: number) => void }) {
@@ -18,6 +46,9 @@ export function ProductCard({ item, onOpen }: { item: CatalogItem; onOpen: (mode
         {m.status === 'pending' && (
           <span className="badge" style={{ position: 'absolute', top: 8, left: 8, color: 'var(--warn)', borderColor: 'var(--warn)', background: 'var(--bg)' }}>на модерации</span>
         )}
+        <span style={{ position: 'absolute', top: 8, right: 8 }}>
+          <HeartButton modelId={m.id} />
+        </span>
       </div>
       <div style={{ minWidth: 0 }}>
         <div className="text-3" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{m.brand.name}</div>

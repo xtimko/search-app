@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchCategories, type Category } from '../api/directory'
-import { fetchHome, type HomeData, type CatalogItem } from '../api/catalog'
+import { fetchHome, fetchCatalogBatch, type HomeData, type CatalogItem } from '../api/catalog'
 import { fetchRequests, type BuyRequest } from '../api/requests'
+import { getRecentIds } from '../recent'
 import { CardRow } from './CardRow'
 
 const CATEGORY_ORDER: Record<string, number> = { footwear: 0, apparel: 1 }
@@ -56,6 +57,7 @@ export function HomePage({
   const [q, setQ] = useState('')
   const [categories, setCategories] = useState<Category[]>([])
   const [home, setHome] = useState<HomeData | null>(null)
+  const [recent, setRecent] = useState<CatalogItem[]>([])
   const [requests, setRequests] = useState<BuyRequest[]>([])
 
   useEffect(() => {
@@ -69,6 +71,7 @@ export function HomePage({
       )
       .catch(() => {})
     fetchHome().then(setHome).catch(() => {})
+    fetchCatalogBatch(getRecentIds().slice(0, 8)).then((r) => setRecent(r.results)).catch(() => {})
     fetchRequests()
       .then((rs) => setRequests(rs.slice(0, 4)))
       .catch(() => {})
@@ -181,6 +184,8 @@ export function HomePage({
             items={home.apparel}
             onOpen={onOpenProduct}
           />
+
+          <Row title="Недавно смотрели" items={recent} onOpen={onOpenProduct} />
 
           {home.brands.length > 0 && (
             <section>

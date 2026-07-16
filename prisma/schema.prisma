@@ -72,9 +72,24 @@ model Model {
   listings   Listing[]
   requests   Request[]
   searchLogs SearchLog[]
+  favorites  Favorite[]
 
   @@unique([brandId, name])
   @@index([categoryId])
+}
+
+// «Слежу» — избранное пользователя на модель. Фундамент уведомлений
+// «появился оффер по твоей модели/цене» (пуш/email — следующий этап).
+model Favorite {
+  id        Int      @id @default(autoincrement())
+  sellerId  Int // пользователь (Seller = любой аккаунт площадки)
+  seller    Seller   @relation("favorites", fields: [sellerId], references: [id])
+  modelId   Int
+  model     Model    @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([sellerId, modelId])
+  @@index([modelId])
 }
 
 // Товар в стоке — конкретный экземпляр у продавца.
@@ -282,6 +297,7 @@ model Seller {
   requests    Request[] @relation("requests")
   requestResponses RequestResponse[] @relation("requestResponses")
   messages    Message[]
+  favorites   Favorite[] @relation("favorites")
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 }

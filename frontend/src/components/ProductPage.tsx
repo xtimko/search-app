@@ -4,6 +4,7 @@ import { fetchProduct, fetchCatalogBatch, offerSize, retailDiscount, type Produc
 import { getRecentIds, pushRecentId } from '../recent'
 import { SellerModal } from './SellerModal'
 import { CardRow } from './CardRow'
+import { HeartButton } from './ProductCard'
 
 // Кликабельное звено хлебных крошек.
 function Crumb({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
@@ -169,7 +170,10 @@ export function ProductPage({
 
         <div>
           <div className="text-3" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.brand.name} · {m.category.name}</div>
-          <h1 className="page-title" style={{ marginTop: 4 }}>{m.name}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <h1 className="page-title" style={{ marginTop: 4 }}>{m.name}</h1>
+            <HeartButton modelId={m.id} size={36} />
+          </div>
           {m.colorway && <div className="text-2" style={{ fontSize: 13, marginTop: 4 }}>{m.colorway}</div>}
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>

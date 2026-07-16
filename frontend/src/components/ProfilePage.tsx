@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ProfileForm } from './ProfileForm'
 import type { AuthUser } from '../api/auth'
 import { fetchSellerProfile, responseLabel, type SellerProfile } from '../api/sellers'
 import { fetchDeals, type DealFull } from '../api/chats'
+import { fetchFavorites } from '../api/favorites'
+import { useFavoritesVersion } from '../favorites'
+import type { CatalogItem } from '../api/catalog'
+import { CardRow } from './CardRow'
 
 const STATUS: Record<AuthUser['status'], { text: string; cls: string }> = {
   pending: { text: 'на модерации', cls: 'text-2' },
@@ -22,14 +27,21 @@ function dealSize(l: DealFull['listing']): string {
 
 // Раздел «Профиль»: VK-аккаунт + данные продавца + сделки + рейтинг и отзывы.
 export function ProfilePage({ auth, onLogout, onOpenChat, onOpenAnalytics }: { auth: AuthUser; onLogout: () => void; onOpenChat: (chatId: number) => void; onOpenAnalytics: () => void }) {
+  const navigate = useNavigate()
   const st = STATUS[auth.status]
   const [pub, setPub] = useState<SellerProfile | null>(null)
   const [deals, setDeals] = useState<DealFull[]>([])
+  const [favs, setFavs] = useState<CatalogItem[]>([])
+  const favVersion = useFavoritesVersion() // снял сердечко в ряду — список обновится
 
   useEffect(() => {
     fetchSellerProfile(auth.id).then(setPub).catch(() => {})
     fetchDeals().then(setDeals).catch(() => {})
   }, [auth.id])
+
+  useEffect(() => {
+    fetchFavorites().then((r) => setFavs(r.results)).catch(() => setFavs([]))
+  }, [auth.id, favVersion])
 
   const stats = pub?.stats
   const resp = stats ? responseLabel(stats.medianResponseMin) : null
@@ -71,6 +83,18 @@ export function ProfilePage({ auth, onLogout, onOpenChat, onOpenAnalytics }: { a
         </div>
         <span className="text-accent" style={{ fontSize: 20 }}>→</span>
       </div>
+
+      <div className="section-title">Слежу {favs.length > 0 && <span className="text-3" style={{ fontWeight: 400, fontSize: 13 }}>· {favs.length}</span>}</div>
+      {favs.length === 0 ? (
+        <div className="card">
+          <div className="text-3" style={{ fontSize: 13 }}>
+            Пока пусто. Жми сердечко на карточке товара — модель появится здесь,
+            а дальше на этом же месте будут уведомления о новых предложениях.
+          </div>
+        </div>
+      ) : (
+        <CardRow items={favs} onOpen={(id) => navigate(`/product/${id}`)} />
+      )}
 
       <div className="section-title">Мои сделки {deals.length > 0 && <span className="text-3" style={{ fontWeight: 400, fontSize: 13 }}>· {deals.length}</span>}</div>
       <div className="card">

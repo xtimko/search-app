@@ -11,6 +11,7 @@ import { sellerRoutesPublic } from './routes/sellers'
 import { requestRoutes } from './routes/requests'
 import { analyticsRoutes } from './routes/analytics'
 import { catalogRoutes } from './routes/catalog'
+import { favoriteRoutes } from './routes/favorites'
 import { uploadRoutes, UPLOAD_DIR } from './routes/upload'
 import { directoryRoutes } from './routes/directory'
 import { listingRoutes } from './routes/listings'
@@ -46,6 +47,8 @@ app.register(requestRoutes)
 app.register(analyticsRoutes)
 // Каталог (карточки моделей + офферы, как StockX).
 app.register(catalogRoutes)
+// «Слежу» — избранные модели.
+app.register(favoriteRoutes)
 // Загрузка фото (multipart → WebP) + раздача /uploads.
 app.register(uploadRoutes)
 app.register(fastifyStatic, { root: UPLOAD_DIR, prefix: '/uploads/', decorateReply: false })
