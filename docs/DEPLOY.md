@@ -47,9 +47,18 @@ sudo docker compose up -d --build
 
 ## 5. Стартовый справочник (один раз)
 ```bash
-sudo docker compose exec app npx prisma db seed
+sudo docker compose exec app npx --no-install prisma db seed
 ```
 Зальёт бренды/модели/категории (идемпотентно).
+
+> ⚠️ **Никогда не запускай `npm install` / `npm i` / голый `npx` на сервере в
+> `/opt/stockpoisk`** — это переписывает `package.json`/`package-lock.json`
+> на «свежие» версии, docker собирает из этой грязной копии, и сборка ломается
+> (так словили Prisma 7 при схеме Prisma 6, инцидент 2026-07-17). Всё npm-ное —
+> только внутри контейнера (`docker compose exec app npx --no-install …`).
+> Проверка чистоты перед деплоем: `git status --short` — должно быть пусто;
+> если показывает `M package-lock.json` / `M package.json`:
+> `git checkout -- package.json package-lock.json`.
 
 ## 6. nginx: поддомен + HTTPS
 ```bash
@@ -80,7 +89,9 @@ sudo certbot --nginx -d stockpoisk.твойдомен.ru           # выпус�
 
 ## Обновление версии
 ```bash
-cd /opt/stockpoisk && sudo git pull
+cd /opt/stockpoisk
+git status --short                    # должно быть ПУСТО (см. ⚠️ в разделе 5)
+sudo git pull
 sudo docker compose up -d --build     # пересоберёт и перезапустит; миграции применятся
 ```
 
