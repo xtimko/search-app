@@ -7,17 +7,38 @@ import { matchModels } from './search'
 
 const LIVE: Prisma.ListingWhereInput = { inStock: true, reserved: false, seller: { status: 'approved' } }
 
+// Фолбэк фото карточки: если у модели нет каталожного imageUrl — берём фото
+// из самого свежего живого объявления (продавец приложил своё фото).
+async function photoFallback(modelIds: number[]): Promise<Map<number, string>> {
+  const map = new Map<number, string>()
+  if (!modelIds.length) return map
+  const withPhoto = await prisma.listing.findMany({
+    where: { ...LIVE, modelId: { in: modelIds }, photo: { not: null } },
+    orderBy: { createdAt: 'desc' },
+    select: { modelId: true, photo: true },
+  })
+  for (const l of withPhoto) if (l.photo && !map.has(l.modelId)) map.set(l.modelId, l.photo)
+  return map
+}
+
 export async function catalogRoutes(app: FastifyInstance) {
   // GET /api/catalog?q=&categoryId=&sort= — карточки моделей с агрегатами
   // (мин. цена, число офферов). С текстом — релевантный fuzzy-порядок.
-  app.get<{ Querystring: { q?: string; categoryId?: string; brandId?: string; sort?: string } }>('/api/catalog', async (req) => {
+  // ?ids=1,2,3 — батч-режим: карточки ровно этих моделей в заданном порядке
+  // (recently viewed на PDP; пригодится рядам главной).
+  app.get<{ Querystring: { q?: string; categoryId?: string; brandId?: string; sort?: string; ids?: string } }>('/api/catalog', async (req) => {
     const q = (req.query.q ?? '').trim()
     const categoryId = req.query.categoryId ? Number(req.query.categoryId) : undefined
     const brandId = req.query.brandId ? Number(req.query.brandId) : undefined
     const sort = (req.query.sort ?? 'offers').toString()
+    const byIds = (req.query.ids ?? '')
+      .split(',')
+      .map((s) => Number(s.trim()))
+      .filter((n) => Number.isInteger(n) && n > 0)
+      .slice(0, 24)
 
     let scored: Map<number, number> | null = null
-    if (q.length >= 2) {
+    if (!byIds.length && q.length >= 2) {
       scored = await matchModels(q)
       if (scored.size === 0) return { results: [] }
     }
@@ -29,15 +50,19 @@ export async function catalogRoutes(app: FastifyInstance) {
     // Агрегаты офферов по моделям.
     const groups = await prisma.listing.groupBy({
       by: ['modelId'],
-      where: { ...LIVE, ...(scored ? { modelId: { in: [...scored.keys()] } } : {}), ...(catIds || brandId ? { model: { ...(catIds ? { categoryId: { in: catIds } } : {}), ...(brandId ? { brandId } : {}) } } : {}) },
+      where: {
+        ...LIVE,
+        ...(byIds.length ? { modelId: { in: byIds } } : scored ? { modelId: { in: [...scored.keys()] } } : {}),
+        ...(catIds || brandId ? { model: { ...(catIds ? { categoryId: { in: catIds } } : {}), ...(brandId ? { brandId } : {}) } } : {}),
+      },
       _min: { price: true },
       _count: true,
       _max: { createdAt: true },
     })
     const aggByModel = new Map(groups.map((g) => [g.modelId, g]))
 
-    // С текстовым запросом показываем и модели без офферов (спрос → доска «Ищу»).
-    const ids = scored ? [...scored.keys()] : groups.map((g) => g.modelId)
+    // С текстовым запросом (и в батч-режиме) показываем и модели без офферов.
+    const ids = byIds.length ? byIds : scored ? [...scored.keys()] : groups.map((g) => g.modelId)
     const models = await prisma.model.findMany({
       where: { id: { in: ids }, ...(catIds ? { categoryId: { in: catIds } } : {}), ...(brandId ? { brandId } : {}) },
       select: {
@@ -47,18 +72,7 @@ export async function catalogRoutes(app: FastifyInstance) {
       },
     })
 
-    // Фолбэк фото карточки: если у модели нет каталожного imageUrl — берём
-    // фото из любого её живого объявления (продавец приложил своё фото).
-    const noImgIds = models.filter((m) => !m.imageUrl).map((m) => m.id)
-    const photoByModel = new Map<number, string>()
-    if (noImgIds.length) {
-      const withPhoto = await prisma.listing.findMany({
-        where: { ...LIVE, modelId: { in: noImgIds }, photo: { not: null } },
-        orderBy: { createdAt: 'desc' },
-        select: { modelId: true, photo: true },
-      })
-      for (const l of withPhoto) if (l.photo && !photoByModel.has(l.modelId)) photoByModel.set(l.modelId, l.photo)
-    }
+    const photoByModel = await photoFallback(models.filter((m) => !m.imageUrl).map((m) => m.id))
 
     const items = models.map((m) => {
       const g = aggByModel.get(m.id)
@@ -72,6 +86,7 @@ export async function catalogRoutes(app: FastifyInstance) {
     })
 
     items.sort((a, b) => {
+      if (byIds.length) return byIds.indexOf(a.model.id) - byIds.indexOf(b.model.id) // порядок запроса (recently viewed)
       if (scored) {
         const d = Math.round(((scored.get(b.model.id) ?? 0) - (scored.get(a.model.id) ?? 0)) * 10)
         if (d !== 0) return d
@@ -158,7 +173,8 @@ export async function catalogRoutes(app: FastifyInstance) {
     return { results: rows.map((r) => ({ id: Number(r.id), name: r.name, offersCount: Number(r.cnt) })) }
   })
 
-  // GET /api/catalog/:id — страница товара: модель, офферы по размерам, последняя продажа, спрос.
+  // GET /api/catalog/:id — страница товара: модель, офферы по размерам,
+  // история продаж (график), спрос, похожие модели.
   app.get<{ Params: { id: string } }>('/api/catalog/:id', async (req, reply) => {
     const id = Number(req.params.id)
     const model = await prisma.model.findUnique({
@@ -166,13 +182,14 @@ export async function catalogRoutes(app: FastifyInstance) {
       select: {
         id: true, name: true, sku: true, status: true, imageUrl: true,
         colorway: true, retailPrice: true, releaseYear: true, description: true,
-        brand: { select: { name: true } },
+        brandId: true, categoryId: true,
+        brand: { select: { id: true, name: true } },
         category: { select: { name: true, slug: true } },
       },
     })
     if (!model) return reply.code(404).send({ error: 'модель не найдена' })
 
-    const [offers, lastDeal, requestsCount] = await Promise.all([
+    const [offers, sales, requestsCount] = await Promise.all([
       prisma.listing.findMany({
         where: { ...LIVE, modelId: id },
         orderBy: { price: 'asc' },
@@ -183,13 +200,16 @@ export async function catalogRoutes(app: FastifyInstance) {
           seller: { select: { id: true, nick: true, vkName: true, photo: true, contact: true, status: true } },
         },
       }),
-      prisma.deal.findFirst({
+      // Все завершённые сделки по модели (для графика цен), старые → новые.
+      prisma.deal.findMany({
         where: { status: 'completed', listing: { modelId: id } },
-        orderBy: { closedAt: 'desc' },
+        orderBy: { closedAt: 'asc' },
+        take: 500,
         select: { price: true, closedAt: true },
       }),
       prisma.request.count({ where: { modelId: id, status: 'active' } }),
     ])
+    const lastDeal = sales.length ? sales[sales.length - 1] : null
 
     // Рейтинги продавцов выдачи — агрегатами.
     const sellerIds = [...new Set(offers.map((o) => o.seller.id))]
@@ -200,12 +220,45 @@ export async function catalogRoutes(app: FastifyInstance) {
     const rByS = new Map(ratings.map((r) => [r.sellerId, { avg: Math.round((r._avg.rating ?? 0) * 10) / 10, count: r._count }]))
     const dByS = new Map(dealCnt.map((d) => [d.sellerId, d._count]))
 
+    // Похожие модели: живые офферы того же бренда или категории; приоритет —
+    // совпадение бренда, затем число офферов. Формат = карточка каталога.
+    const relGroups = await prisma.listing.groupBy({
+      by: ['modelId'],
+      where: { ...LIVE, modelId: { not: id }, model: { OR: [{ brandId: model.brandId }, { categoryId: model.categoryId }] } },
+      _min: { price: true },
+      _count: true,
+    })
+    const relAgg = new Map(relGroups.map((g) => [g.modelId, g]))
+    const relModels = await prisma.model.findMany({
+      where: { id: { in: relGroups.map((g) => g.modelId) } },
+      select: {
+        id: true, name: true, sku: true, status: true, imageUrl: true, retailPrice: true, brandId: true,
+        brand: { select: { name: true } },
+        category: { select: { name: true, slug: true } },
+      },
+    })
+    relModels.sort((a, b) => {
+      const brandDiff = Number(b.brandId === model.brandId) - Number(a.brandId === model.brandId)
+      if (brandDiff !== 0) return brandDiff
+      return (relAgg.get(b.id)?._count ?? 0) - (relAgg.get(a.id)?._count ?? 0)
+    })
+    const relTop = relModels.slice(0, 8)
+    const relPhotos = await photoFallback(relTop.filter((m) => !m.imageUrl).map((m) => m.id))
+
     return {
       model,
       // hero: фото модели, иначе первое фото из офферов
       photo: model.imageUrl ?? offers.find((o) => o.photo)?.photo ?? null,
       lastSale: lastDeal ? { price: lastDeal.price, at: lastDeal.closedAt } : null,
+      // история продаж для графика: [{price, at}], старые → новые
+      sales: sales.map((s) => ({ price: s.price, at: s.closedAt })),
       activeRequests: requestsCount,
+      related: relTop.map((m) => ({
+        model: m,
+        photo: m.imageUrl ?? relPhotos.get(m.id) ?? null,
+        minPrice: relAgg.get(m.id)?._min.price ?? null,
+        offersCount: relAgg.get(m.id)?._count ?? 0,
+      })),
       offers: offers.map((o) => ({
         ...o,
         seller: {

@@ -1,6 +1,81 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchProduct, offerSize, retailDiscount, type ProductData, type Offer } from '../api/catalog'
+import { useNavigate } from 'react-router-dom'
+import { fetchProduct, fetchCatalogBatch, offerSize, retailDiscount, type ProductData, type Offer, type CatalogItem } from '../api/catalog'
+import { getRecentIds, pushRecentId } from '../recent'
 import { SellerModal } from './SellerModal'
+import { ProductCard } from './ProductCard'
+
+// Кликабельное звено хлебных крошек.
+function Crumb({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className="text-3"
+      style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', padding: 0, transition: 'color 0.15s', flexShrink: 0 }}
+      onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text)')}
+      onMouseLeave={(e) => (e.currentTarget.style.color = '')}
+    >
+      {children}
+    </button>
+  )
+}
+
+// Горизонтальный ряд карточек (похожие / недавно смотрели).
+function CardRow({ items, onOpen }: { items: CatalogItem[]; onOpen: (id: number) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: 12, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 4, scrollSnapType: 'x proximity' }}>
+      {items.map((it) => (
+        <div key={it.model.id} style={{ width: 190, flexShrink: 0, scrollSnapAlign: 'start' }}>
+          <ProductCard item={it} onOpen={onOpen} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const plural = (n: number, one: string, few: string, many: string) =>
+  n % 10 === 1 && n % 100 !== 11 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many
+
+// График цен по завершённым сделкам — лёгкий SVG без библиотек.
+// Оси: слева min/mid/max цены, снизу первая и последняя даты; точки с
+// нативным тултипом (<title>). При min=max линия рисуется по центру.
+function PriceChart({ sales }: { sales: { price: number; at: string }[] }) {
+  const W = 640, H = 220, PL = 56, PR = 14, PT = 14, PB = 28
+  const prices = sales.map((s) => s.price)
+  const min = Math.min(...prices), max = Math.max(...prices)
+  const pad = (max - min || max * 0.1 || 1) * 0.1
+  const lo = min - pad, hi = max + pad
+  const times = sales.map((s) => +new Date(s.at))
+  const t0 = times[0], tSpan = times[times.length - 1] - t0 || 1
+  const x = (t: number) => PL + ((t - t0) / tSpan) * (W - PL - PR)
+  const y = (p: number) => PT + (1 - (p - lo) / (hi - lo)) * (H - PT - PB)
+  const pts = sales.map((s, i) => ({ cx: x(times[i]), cy: y(s.price), s }))
+  const line = pts.map((p) => `${p.cx.toFixed(1)},${p.cy.toFixed(1)}`).join(' ')
+  const rub = (n: number) => n.toLocaleString('ru-RU')
+  const dat = (t: number) => new Date(t).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+  const levels = min === max ? [min] : [min, Math.round((min + max) / 2), max]
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }} role="img" aria-label="График цен продаж">
+      {levels.map((p) => (
+        <g key={p}>
+          <line x1={PL} y1={y(p)} x2={W - PR} y2={y(p)} stroke="var(--border)" strokeDasharray="3 5" strokeWidth="1" />
+          <text x={PL - 8} y={y(p) + 3.5} textAnchor="end" fontSize="10.5" fill="var(--text-3)" className="tnum">{rub(p)}</text>
+        </g>
+      ))}
+      <polygon points={`${PL},${H - PB} ${line} ${pts[pts.length - 1].cx.toFixed(1)},${H - PB}`} fill="var(--text)" opacity="0.05" />
+      <polyline points={line} fill="none" stroke="var(--text)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      {pts.map((p, i) => (
+        <circle key={i} cx={p.cx} cy={p.cy} r="3.5" fill={i === pts.length - 1 ? 'var(--text)' : 'var(--bg)'} stroke="var(--text)" strokeWidth="1.6">
+          <title>{`${rub(p.s.price)} ₽ · ${new Date(p.s.at).toLocaleDateString('ru-RU')}`}</title>
+        </circle>
+      ))}
+      <text x={PL} y={H - 8} fontSize="10.5" fill="var(--text-3)">{dat(times[0])}</text>
+      {tSpan > 1 && (
+        <text x={W - PR} y={H - 8} textAnchor="end" fontSize="10.5" fill="var(--text-3)">{dat(times[times.length - 1])}</text>
+      )}
+    </svg>
+  )
+}
 
 // Страница товара (как StockX): фото + сводка, размеры с мин. ценой, офферы.
 export function ProductPage({
@@ -14,16 +89,33 @@ export function ProductPage({
   onContact: (listingId: number, fallbackContact: string) => void
   onLeaveRequest: () => void
 }) {
+  const navigate = useNavigate()
   const [data, setData] = useState<ProductData | null>(null)
   const [error, setError] = useState('')
   const [size, setSize] = useState<string | null>(null)
   const [sellerId, setSellerId] = useState(0)
   const [imgOk, setImgOk] = useState(true)
+  const [recent, setRecent] = useState<CatalogItem[]>([])
 
   useEffect(() => {
     setData(null)
+    setSize(null)
+    setImgOk(true)
+    window.scrollTo({ top: 0 }) // переход с нижних каруселей — наверх новой страницы
     fetchProduct(modelId).then(setData).catch(() => setError('не удалось загрузить товар'))
   }, [modelId])
+
+  // «Недавно смотрели»: снапшот id ДО записи текущего товара (сам себя не показывает).
+  useEffect(() => {
+    const ids = getRecentIds().filter((x) => x !== modelId).slice(0, 8)
+    setRecent([])
+    fetchCatalogBatch(ids).then((r) => setRecent(r.results)).catch(() => {})
+  }, [modelId])
+
+  // Запоминаем товар после успешной загрузки.
+  useEffect(() => {
+    if (data) pushRecentId(modelId)
+  }, [data, modelId])
 
   // Заголовок вкладки по названию модели (для шаринга/истории).
   useEffect(() => {
@@ -67,7 +159,17 @@ export function ProductPage({
   if (m.releaseYear != null) details.push(['Год релиза', String(m.releaseYear)])
   return (
     <div style={{ paddingTop: 16 }} className="fade-up">
-      <button className="btn btn-ghost btn-sm" onClick={onBack}>← Каталог</button>
+      {/* Хлебные крошки: ← назад · Главная › Категория › Бренд › Модель */}
+      <nav aria-label="Хлебные крошки" style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, whiteSpace: 'nowrap', overflowX: 'auto', scrollbarWidth: 'none' }}>
+        <button className="btn btn-ghost btn-sm" onClick={onBack} title="назад" aria-label="назад" style={{ padding: '3px 9px', flexShrink: 0 }}>←</button>
+        <Crumb onClick={() => navigate('/')}>Главная</Crumb>
+        <span className="text-3" aria-hidden>›</span>
+        <Crumb onClick={() => navigate(`/catalog?cat=${m.category.slug}`)}>{m.category.name}</Crumb>
+        <span className="text-3" aria-hidden>›</span>
+        <Crumb onClick={() => navigate(`/catalog?brand=${m.brand.id}&bn=${encodeURIComponent(m.brand.name)}`)}>{m.brand.name}</Crumb>
+        <span className="text-3" aria-hidden>›</span>
+        <span className="text-2" style={{ flexShrink: 0 }}>{m.name}</span>
+      </nav>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginTop: 12 }}>
         <div className="card" style={{ aspectRatio: '4 / 3', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: 0 }}>
@@ -178,6 +280,44 @@ export function ProductPage({
               </div>
             ))}
           </div>
+        </>
+      )}
+
+      {data.sales.length > 0 && (
+        <>
+          <div className="section-title">
+            История продаж <span className="text-3" style={{ fontFamily: 'var(--font)', fontWeight: 400, fontSize: 13 }}>· {data.sales.length}</span>
+          </div>
+          <div className="card">
+            {data.sales.length >= 3 ? (
+              <>
+                <PriceChart sales={data.sales} />
+                <div className="text-3" style={{ fontSize: 12, marginTop: 8 }}>
+                  за всё время: мин <b className="tnum">{Math.min(...data.sales.map((s) => s.price)).toLocaleString('ru-RU')} ₽</b> · макс{' '}
+                  <b className="tnum">{Math.max(...data.sales.map((s) => s.price)).toLocaleString('ru-RU')} ₽</b>
+                </div>
+              </>
+            ) : (
+              <div className="text-2" style={{ fontSize: 13 }}>
+                Пока {data.sales.length} {plural(data.sales.length, 'продажа', 'продажи', 'продаж')} — график появится после третьей.
+                Последняя: <b className="tnum">{data.sales[data.sales.length - 1].price.toLocaleString('ru-RU')} ₽</b>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {data.related.length > 0 && (
+        <>
+          <div className="section-title">Похожие модели</div>
+          <CardRow items={data.related} onOpen={(id) => navigate(`/product/${id}`)} />
+        </>
+      )}
+
+      {recent.length > 0 && (
+        <>
+          <div className="section-title">Недавно смотрели</div>
+          <CardRow items={recent} onOpen={(id) => navigate(`/product/${id}`)} />
         </>
       )}
 

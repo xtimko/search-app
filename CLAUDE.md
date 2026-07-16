@@ -66,10 +66,11 @@
 | — заголовки авторизации к API (`x-vk-user-id`) | `frontend/src/api/client.ts` |
 | — массовая загрузка (xlsx-шаблон, парсинг, preview/commit) | `frontend/src/components/ImportPanel.tsx` |
 | — клиент поиска (`/api/search`) | `frontend/src/api/search.ts` |
-| — каталог: `GET /api/catalog` (модели+агрегаты), `GET /api/catalog/:id` (товар+офферы) | `backend/src/routes/catalog.ts` |
+| — каталог: `GET /api/catalog` (модели+агрегаты, `?ids=` батч), `GET /api/catalog/:id` (товар+офферы+sales+related), suggest/trends/brands-top | `backend/src/routes/catalog.ts` |
 | — клиент каталога | `frontend/src/api/catalog.ts` |
 | — карточка модели в каталоге | `frontend/src/components/ProductCard.tsx` |
-| — страница товара: офферы по размерам, последняя продажа, «Детали товара» (паспорт) + бейдж «−N% от ритейла» | `frontend/src/components/ProductPage.tsx` |
+| — страница товара: крошки, офферы по размерам, график цен (SVG), «Детали товара» (паспорт), бейдж «−N% от ритейла», похожие, недавно смотрели | `frontend/src/components/ProductPage.tsx` |
+| — недавно просмотренные модели (localStorage, для PDP и главной) | `frontend/src/recent.ts` |
 | — клиент импорта (SheetJS) | `frontend/src/api/import.ts` |
 | — загрузка фото: multipart → sharp → WebP → `/uploads` (volume) | `backend/src/routes/upload.ts` |
 | — клиент загрузки фото | `frontend/src/api/upload.ts` |

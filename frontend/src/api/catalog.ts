@@ -54,10 +54,12 @@ export interface Offer {
 }
 
 export interface ProductData {
-  model: CatalogModel
+  model: CatalogModel & { brand: { id: number; name: string } } // id — для крошки на каталог бренда
   photo: string | null
   lastSale: { price: number; at: string } | null
+  sales: { price: number; at: string }[] // завершённые сделки, старые → новые (график цен)
   activeRequests: number
+  related: CatalogItem[] // похожие модели (тот же бренд/категория, живые офферы)
   offers: Offer[]
 }
 
@@ -78,6 +80,12 @@ export function fetchCatalog(params: { q?: string; categoryId?: number; brandId?
 
 export function fetchProduct(id: number): Promise<ProductData> {
   return getJson(`/api/catalog/${id}`)
+}
+
+// Карточки конкретных моделей в заданном порядке (recently viewed, ряды главной).
+export function fetchCatalogBatch(ids: number[]): Promise<{ results: CatalogItem[] }> {
+  if (!ids.length) return Promise.resolve({ results: [] })
+  return getJson(`/api/catalog?ids=${ids.join(',')}`)
 }
 
 export function offerSize(o: { sizeUs: string | null; sizeEu: string | null; size: string | null }): string {
