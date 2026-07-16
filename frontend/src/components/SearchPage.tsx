@@ -9,6 +9,7 @@ const CATEGORY_ORDER: Record<string, number> = { footwear: 0, apparel: 1 }
 interface Props {
   initialQ?: string
   initialCategorySlug?: string
+  initialSort?: string // 'offers' | 'price_asc' | 'new' (из ?sort= — «Смотреть все» с главной)
   initialBrand?: { id: number; name: string } // стартовый бренд-фильтр (можно снять)
   lockedBrand?: { id: number; name: string } // страница бренда: зафиксирован, секция брендов скрыта
   onOpenProduct: (modelId: number) => void
@@ -26,13 +27,13 @@ function useIsDesktop(): boolean {
 
 // Каталог-браузер (как StockX): сайдбар фильтров (десктоп) / bottom sheet
 // (мобайл), активные фильтры-чипы, счётчик и пагинация «Показать ещё».
-export function SearchPage({ initialQ, initialCategorySlug, initialBrand, lockedBrand, onOpenProduct }: Props) {
+export function SearchPage({ initialQ, initialCategorySlug, initialSort, initialBrand, lockedBrand, onOpenProduct }: Props) {
   const isDesktop = useIsDesktop()
   const [q, setQ] = useState(initialQ ?? '')
   const [categories, setCategories] = useState<Category[]>([])
   const [category, setCategory] = useState(0)
   const [ready, setReady] = useState(false)
-  const [sort, setSort] = useState('offers')
+  const [sort, setSort] = useState(initialSort === 'price_asc' || initialSort === 'new' ? initialSort : 'offers')
   const [filters, setFilters] = useState<CatalogFiltersState>({ ...EMPTY_FILTERS, brands: initialBrand ? [initialBrand] : [] })
   const [brandOptions, setBrandOptions] = useState<{ id: number; name: string; offersCount: number }[]>([])
   const [items, setItems] = useState<CatalogItem[]>([])

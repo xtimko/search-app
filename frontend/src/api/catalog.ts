@@ -141,3 +141,17 @@ export interface BrandInfo {
 export function fetchBrandInfo(id: number): Promise<BrandInfo> {
   return getJson(`/api/brands/${id}`)
 }
+
+// Ряды главной (как StockX) — один запрос на все карусели + топ-бренды.
+export interface HomeData {
+  trending: CatalogItem[]
+  fresh: CatalogItem[]
+  deficit: CatalogItem[]
+  footwear: CatalogItem[]
+  apparel: CatalogItem[]
+  brands: { id: number; name: string; offersCount: number }[]
+}
+
+export function fetchHome(): Promise<HomeData> {
+  return getJson('/api/home')
+}

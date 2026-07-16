@@ -396,6 +396,7 @@ function CatalogRoute({ onOpenProduct }: { onOpenProduct: (id: number) => void }
       key={sp.toString()}
       initialQ={sp.get('q') || undefined}
       initialCategorySlug={sp.get('cat') || undefined}
+      initialSort={sp.get('sort') || undefined}
       initialBrand={brand ? { id: Number(brand), name: sp.get('bn') || `бренд #${brand}` } : undefined}
       onOpenProduct={onOpenProduct}
     />

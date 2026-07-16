@@ -41,7 +41,8 @@
 | — оболочка: 2-строчный хедер (поиск в центре, категории+Бренды) + нижний таб-бар (мобайл) | `frontend/src/App.tsx` |
 | — глобальный поиск хедера с живыми подсказками (`/api/suggest`) | `frontend/src/components/HeaderSearch.tsx` |
 | — полоска «Сейчас ищут» под хедером (`/api/trends`) | `frontend/src/components/TrendsBar.tsx` |
-| — главная: hero-поиск, категории, горячие предложения, тизер запросов | `frontend/src/components/HomePage.tsx` |
+| — главная: hero-поиск, промо-слот, ряды-карусели (`/api/home`), плитки брендов, тизер запросов | `frontend/src/components/HomePage.tsx` |
+| — горизонтальный ряд карточек (главная, PDP: похожие/недавние) | `frontend/src/components/CardRow.tsx` |
 | — карточка товара в выдаче (поиск + главная) | `frontend/src/components/ResultCard.tsx` |
 | — каталог-браузер: сайдбар/шит фильтров, чипы, пагинация «Показать ещё» | `frontend/src/components/SearchPage.tsx` |
 | — панель фильтров каталога (категории, бренды-мультивыбор, размер, цена, состояние) | `frontend/src/components/CatalogFilters.tsx` |
@@ -68,7 +69,7 @@
 | — заголовки авторизации к API (`x-vk-user-id`) | `frontend/src/api/client.ts` |
 | — массовая загрузка (xlsx-шаблон, парсинг, preview/commit) | `frontend/src/components/ImportPanel.tsx` |
 | — клиент поиска (`/api/search`) | `frontend/src/api/search.ts` |
-| — каталог: `GET /api/catalog` (агрегаты; фильтры brands/size/price/condition; `?ids=` батч; offset+total), `GET /api/catalog/:id` (товар+офферы+sales+related), suggest/trends, `/api/brands/top`+`/api/brands/:id` | `backend/src/routes/catalog.ts` |
+| — каталог: `GET /api/catalog` (агрегаты; фильтры brands/size/price/condition; `?ids=` батч; offset+total), `GET /api/catalog/:id` (товар+офферы+sales+related), `GET /api/home` (ряды главной), suggest/trends, `/api/brands/top`+`/api/brands/:id` | `backend/src/routes/catalog.ts` |
 | — клиент каталога | `frontend/src/api/catalog.ts` |
 | — карточка модели в каталоге | `frontend/src/components/ProductCard.tsx` |
 | — страница товара: крошки, офферы по размерам, график цен (SVG), «Детали товара» (паспорт), бейдж «−N% от ритейла», похожие, недавно смотрели | `frontend/src/components/ProductPage.tsx` |

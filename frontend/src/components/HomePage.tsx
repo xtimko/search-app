@@ -1,12 +1,48 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { fetchCategories, type Category } from '../api/directory'
-import { fetchCatalog, type CatalogItem } from '../api/catalog'
+import { fetchHome, type HomeData, type CatalogItem } from '../api/catalog'
 import { fetchRequests, type BuyRequest } from '../api/requests'
-import { ProductCard } from './ProductCard'
+import { CardRow } from './CardRow'
 
 const CATEGORY_ORDER: Record<string, number> = { footwear: 0, apparel: 1 }
 
-// Главная: hero-поиск, категории, горячие предложения, тизер запросов «Ищу».
+// Ряд-карусель главной с заголовком и «Смотреть все →» (как StockX).
+function Row({ title, hint, actionLabel, onAction, items, onOpen }: {
+  title: string
+  hint?: string
+  actionLabel?: string
+  onAction?: () => void
+  items: CatalogItem[]
+  onOpen: (id: number) => void
+}) {
+  if (items.length === 0) return null
+  return (
+    <section>
+      <div className="section-title" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+        <span>
+          {title}
+          {hint && <span className="text-3" style={{ fontFamily: 'var(--font)', fontWeight: 400, fontSize: 12.5, marginLeft: 8 }}>{hint}</span>}
+        </span>
+        {onAction && (
+          <button
+            onClick={onAction}
+            className="text-2"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, padding: 0, whiteSpace: 'nowrap', transition: 'color 0.15s' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text)')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '')}
+          >
+            {actionLabel ?? 'Смотреть все'} →
+          </button>
+        )}
+      </div>
+      <CardRow items={items} onOpen={onOpen} />
+    </section>
+  )
+}
+
+// Главная (как StockX): hero-поиск → промо-слот → ряды-карусели (тренды,
+// новинки, дефицит, категории) → плитки брендов → тизер запросов «Ищу».
 export function HomePage({
   onSearch,
   onOpenProduct,
@@ -16,9 +52,10 @@ export function HomePage({
   onOpenProduct: (modelId: number) => void
   onGoRequests?: () => void
 }) {
+  const navigate = useNavigate()
   const [q, setQ] = useState('')
   const [categories, setCategories] = useState<Category[]>([])
-  const [hot, setHot] = useState<CatalogItem[]>([])
+  const [home, setHome] = useState<HomeData | null>(null)
   const [requests, setRequests] = useState<BuyRequest[]>([])
 
   useEffect(() => {
@@ -31,10 +68,7 @@ export function HomePage({
         ),
       )
       .catch(() => {})
-    // «Горячие» — модели со свежими поступлениями; позже здесь будут платные промо-слоты.
-    fetchCatalog({ sort: 'new' })
-      .then((res) => setHot(res.results.slice(0, 8)))
-      .catch(() => {})
+    fetchHome().then(setHome).catch(() => {})
     fetchRequests()
       .then((rs) => setRequests(rs.slice(0, 4)))
       .catch(() => {})
@@ -87,21 +121,88 @@ export function HomePage({
         </div>
       </section>
 
-      <section>
-        <div className="section-title">
-          Горячие предложения
-          <span className="badge">промо скоро</span>
-        </div>
-        {hot.length === 0 ? (
-          <p className="text-3">пока пусто — сток наполняется</p>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 12 }}>
-            {hot.map((it) => (
-              <ProductCard key={it.model.id} item={it} onOpen={onOpenProduct} />
-            ))}
+      {/* Hero-промо слот: задел под платное промо продавцов (монетизация);
+          пока его никто не купил — самопромо площадки для продавцов. */}
+      <section style={{ marginTop: 26 }}>
+        <div
+          className="card"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap',
+            background: 'linear-gradient(120deg, var(--bg-card) 0%, var(--bg-elev) 100%)', border: '1px solid var(--border-strong)',
+          }}
+        >
+          <div style={{ minWidth: 240, flex: 1 }}>
+            <div className="badge" style={{ marginBottom: 8 }}>промо-слот</div>
+            <div className="display" style={{ fontSize: 18 }}>Продаёшь сток? Выложи его за минуту.</div>
+            <div className="text-2" style={{ fontSize: 13, marginTop: 6 }}>
+              Загрузка таблицей, отметка «продано» в один тап — покупатели найдут тебя сами.
+            </div>
           </div>
-        )}
+          <button className="btn btn-primary" onClick={() => navigate('/seller')}>Разместить сток</button>
+        </div>
       </section>
+
+      {home && (
+        <>
+          <Row
+            title="Тренды недели"
+            hint="по поискам покупателей"
+            actionLabel="Смотреть все"
+            onAction={() => navigate('/catalog')}
+            items={home.trending}
+            onOpen={onOpenProduct}
+          />
+          <Row
+            title="Новые поступления"
+            actionLabel="Смотреть все"
+            onAction={() => navigate('/catalog?sort=new')}
+            items={home.fresh}
+            onOpen={onOpenProduct}
+          />
+          <Row
+            title="Дефицит"
+            hint="ищут чаще, чем есть в наличии"
+            actionLabel="Аналитика спроса"
+            onAction={() => navigate('/analytics')}
+            items={home.deficit}
+            onOpen={onOpenProduct}
+          />
+          <Row
+            title="Обувь"
+            actionLabel="Смотреть все"
+            onAction={() => onSearch(undefined, 'footwear')}
+            items={home.footwear}
+            onOpen={onOpenProduct}
+          />
+          <Row
+            title="Одежда"
+            actionLabel="Смотреть все"
+            onAction={() => onSearch(undefined, 'apparel')}
+            items={home.apparel}
+            onOpen={onOpenProduct}
+          />
+
+          {home.brands.length > 0 && (
+            <section>
+              <div className="section-title">Топ-бренды</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10 }}>
+                {home.brands.map((b) => (
+                  <button
+                    key={b.id}
+                    className="card card-hover"
+                    onClick={() => navigate(`/brand/${b.id}`)}
+                    style={{ cursor: 'pointer', textAlign: 'center', padding: '16px 10px', border: '1px solid var(--border)', fontFamily: 'inherit' }}
+                  >
+                    <div className="display text-3" style={{ fontSize: 22 }}>{b.name.slice(0, 1)}</div>
+                    <div style={{ fontWeight: 700, fontSize: 13.5, marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.name}</div>
+                    <div className="text-3 tnum" style={{ fontSize: 11.5, marginTop: 2 }}>{b.offersCount} офф.</div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      )}
 
       <section>
         <div className="section-title">Свежие запросы «Ищу»</div>

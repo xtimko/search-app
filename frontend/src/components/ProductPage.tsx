@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { fetchProduct, fetchCatalogBatch, offerSize, retailDiscount, type ProductData, type Offer, type CatalogItem } from '../api/catalog'
 import { getRecentIds, pushRecentId } from '../recent'
 import { SellerModal } from './SellerModal'
-import { ProductCard } from './ProductCard'
+import { CardRow } from './CardRow'
 
 // Кликабельное звено хлебных крошек.
 function Crumb({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
@@ -17,19 +17,6 @@ function Crumb({ onClick, children }: { onClick: () => void; children: React.Rea
     >
       {children}
     </button>
-  )
-}
-
-// Горизонтальный ряд карточек (похожие / недавно смотрели).
-function CardRow({ items, onOpen }: { items: CatalogItem[]; onOpen: (id: number) => void }) {
-  return (
-    <div style={{ display: 'flex', gap: 12, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 4, scrollSnapType: 'x proximity' }}>
-      {items.map((it) => (
-        <div key={it.model.id} style={{ width: 190, flexShrink: 0, scrollSnapAlign: 'start' }}>
-          <ProductCard item={it} onOpen={onOpen} />
-        </div>
-      ))}
-    </div>
   )
 }
 

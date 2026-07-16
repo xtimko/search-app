@@ -21,6 +21,57 @@ async function photoFallback(modelIds: number[]): Promise<Map<number, string>> {
   return map
 }
 
+// Карточки каталога по списку id: агрегаты живых офферов + фото-фолбэк,
+// порядок ids сохраняется, модели без живых офферов остаются (нулевые агрегаты).
+async function cardsByIds(ids: number[]) {
+  if (!ids.length) return []
+  const [groups, models] = await Promise.all([
+    prisma.listing.groupBy({
+      by: ['modelId'],
+      where: { ...LIVE, modelId: { in: ids } },
+      _min: { price: true },
+      _count: true,
+    }),
+    prisma.model.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true, name: true, sku: true, status: true, imageUrl: true, retailPrice: true,
+        brand: { select: { name: true } },
+        category: { select: { name: true, slug: true } },
+      },
+    }),
+  ])
+  const agg = new Map(groups.map((g) => [g.modelId, g]))
+  const photos = await photoFallback(models.filter((m) => !m.imageUrl).map((m) => m.id))
+  const byId = new Map(
+    models.map((m) => [
+      m.id,
+      {
+        model: m,
+        photo: m.imageUrl ?? photos.get(m.id) ?? null,
+        minPrice: agg.get(m.id)?._min.price ?? null,
+        offersCount: agg.get(m.id)?._count ?? 0,
+      },
+    ]),
+  )
+  return ids.map((id) => byId.get(id)).filter((x): x is NonNullable<typeof x> => !!x)
+}
+
+// Топ брендов по числу живых офферов (меню «Бренды», плитки главной, фильтр каталога).
+async function topBrands(limit: number) {
+  const rows = await prisma.$queryRaw<{ id: number; name: string; cnt: number }[]>`
+    SELECT b.id::int, b.name, count(l.id)::int AS cnt
+    FROM "Brand" b
+    JOIN "Model" m ON m."brandId" = b.id
+    JOIN "Listing" l ON l."modelId" = m.id AND l."inStock" AND NOT l.reserved
+    JOIN "Seller" s ON s.id = l."sellerId" AND s.status = 'approved'
+    GROUP BY b.id, b.name
+    ORDER BY cnt DESC
+    LIMIT ${limit}
+  `
+  return rows.map((r) => ({ id: Number(r.id), name: r.name, offersCount: Number(r.cnt) }))
+}
+
 export async function catalogRoutes(app: FastifyInstance) {
   // GET /api/catalog?q=&categoryId=&sort= — карточки моделей с агрегатами
   // (мин. цена, число офферов). С текстом — релевантный fuzzy-порядок.
@@ -193,17 +244,75 @@ export async function catalogRoutes(app: FastifyInstance) {
   // офферов (меню «Бренды» — 12 по умолчанию; фильтр каталога берёт до 100).
   app.get<{ Querystring: { limit?: string } }>('/api/brands/top', async (req) => {
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 12))
-    const rows = await prisma.$queryRaw<{ id: number; name: string; cnt: number }[]>`
-      SELECT b.id::int, b.name, count(l.id)::int AS cnt
-      FROM "Brand" b
-      JOIN "Model" m ON m."brandId" = b.id
-      JOIN "Listing" l ON l."modelId" = m.id AND l."inStock" AND NOT l.reserved
-      JOIN "Seller" s ON s.id = l."sellerId" AND s.status = 'approved'
-      GROUP BY b.id, b.name
-      ORDER BY cnt DESC
-      LIMIT ${limit}
-    `
-    return { results: rows.map((r) => ({ id: Number(r.id), name: r.name, offersCount: Number(r.cnt) })) }
+    return { results: await topBrands(limit) }
+  })
+
+  // GET /api/home — данные рядов главной одним запросом (формат карточек =
+  // карточка каталога): тренды недели (по поискам, фолбэк — топ офферов),
+  // новые поступления, дефицит (спрос за 14 дней > живого предложения),
+  // категорийные ряды (обувь/одежда), топ-бренды.
+  app.get('/api/home', async () => {
+    const since7 = new Date(Date.now() - 7 * 864e5)
+    const since14 = new Date(Date.now() - 14 * 864e5)
+    const [searchG7, searchG14, reqG, liveG, brands] = await Promise.all([
+      prisma.searchLog.groupBy({
+        by: ['modelId'],
+        where: { createdAt: { gte: since7 }, modelId: { not: null } },
+        _count: true,
+        orderBy: { _count: { modelId: 'desc' } },
+        take: 24,
+      }),
+      prisma.searchLog.groupBy({ by: ['modelId'], where: { createdAt: { gte: since14 }, modelId: { not: null } }, _count: true }),
+      prisma.request.groupBy({ by: ['modelId'], where: { status: 'active' }, _count: true }),
+      prisma.listing.groupBy({ by: ['modelId'], where: LIVE, _count: true, _max: { createdAt: true } }),
+      topBrands(12),
+    ])
+
+    const offersTop = [...liveG].sort((a, b) => b._count - a._count).map((g) => g.modelId)
+
+    // Тренды недели: топ по поискам; при пустых логах добиваем топом офферов.
+    const trendIds = searchG7.map((g) => g.modelId as number)
+    for (const id of offersTop) {
+      if (trendIds.length >= 12) break
+      if (!trendIds.includes(id)) trendIds.push(id)
+    }
+
+    // Новые поступления: по самому свежему живому офферу модели.
+    const freshIds = [...liveG]
+      .sort((a, b) => +(b._max.createdAt ?? 0) - +(a._max.createdAt ?? 0))
+      .slice(0, 12)
+      .map((g) => g.modelId)
+
+    // Дефицит: спрос (поиски 14д + активные запросы «Ищу») больше живого
+    // предложения — то, что стоит закупить / оставить запрос.
+    const supply = new Map(liveG.map((g) => [g.modelId, g._count]))
+    const demand = new Map<number, number>()
+    for (const g of searchG14) demand.set(g.modelId as number, (demand.get(g.modelId as number) ?? 0) + g._count)
+    for (const g of reqG) demand.set(g.modelId, (demand.get(g.modelId) ?? 0) + g._count)
+    const deficitIds = [...demand.entries()]
+      .map(([id, d]) => ({ id, d, s: supply.get(id) ?? 0 }))
+      .filter((x) => x.d >= 2 && x.d > x.s)
+      .sort((a, b) => b.d - a.d || a.s - b.s)
+      .slice(0, 12)
+      .map((x) => x.id)
+
+    // Одна выборка карточек на все ряды.
+    const allIds = [...new Set([...trendIds.slice(0, 12), ...freshIds, ...deficitIds, ...offersTop.slice(0, 60)])]
+    const cards = await cardsByIds(allIds)
+    const byId = new Map(cards.map((c) => [c.model.id, c]))
+    const pick = (ids: number[]) => ids.map((id) => byId.get(id)).filter((x): x is NonNullable<typeof x> => !!x)
+
+    // Категорийные ряды — по числу офферов внутри корневой категории.
+    const bySlug = (slug: string) => offersTop.filter((id) => byId.get(id)?.model.category.slug === slug).slice(0, 12)
+
+    return {
+      trending: pick(trendIds.slice(0, 12)),
+      fresh: pick(freshIds),
+      deficit: pick(deficitIds),
+      footwear: pick(bySlug('footwear')),
+      apparel: pick(bySlug('apparel')),
+      brands,
+    }
   })
 
   // GET /api/brands/:id — шапка страницы бренда: имя + счётчики наличия.
