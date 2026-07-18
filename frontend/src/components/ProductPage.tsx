@@ -25,10 +25,13 @@ const plural = (n: number, one: string, few: string, many: string) =>
   n % 10 === 1 && n % 100 !== 11 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many
 
 // График цен по завершённым сделкам — лёгкий SVG без библиотек.
-// Оси: слева min/mid/max цены, снизу первая и последняя даты; точки с
-// нативным тултипом (<title>). При min=max линия рисуется по центру.
+// Оси: слева min/mid/max цены, снизу первая и последняя даты. Наведение в
+// любом месте графика подсвечивает БЛИЖАЙШУЮ точку: направляющая + плашка
+// с суммой и датой продажи (работает и пальцем — pointer events).
+// При min=max линия рисуется по центру.
 function PriceChart({ sales }: { sales: { price: number; at: string }[] }) {
   const W = 640, H = 220, PL = 56, PR = 14, PT = 14, PB = 28
+  const [hover, setHover] = useState<number | null>(null)
   const prices = sales.map((s) => s.price)
   const min = Math.min(...prices), max = Math.max(...prices)
   const pad = (max - min || max * 0.1 || 1) * 0.1
@@ -42,8 +45,33 @@ function PriceChart({ sales }: { sales: { price: number; at: string }[] }) {
   const rub = (n: number) => n.toLocaleString('ru-RU')
   const dat = (t: number) => new Date(t).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
   const levels = min === max ? [min] : [min, Math.round((min + max) / 2), max]
+
+  // Ближайшая по горизонтали точка к курсору/пальцу (в координатах viewBox).
+  function onMove(e: React.PointerEvent<SVGSVGElement>) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const xv = ((e.clientX - rect.left) / rect.width) * W
+    let best = 0
+    for (let i = 1; i < pts.length; i++) if (Math.abs(pts[i].cx - xv) < Math.abs(pts[best].cx - xv)) best = i
+    setHover(best)
+  }
+
+  const hp = hover != null ? pts[hover] : null
+  const tipLabel = hp ? `${rub(hp.s.price)} ₽ · ${dat(+new Date(hp.s.at))}` : ''
+  const tipW = tipLabel.length * 6.8 + 20
+  // Плашка над точкой; у верхнего края — под точкой; по горизонтали не вылезает.
+  const tipX = hp ? Math.min(Math.max(hp.cx, PL + tipW / 2), W - PR - tipW / 2) : 0
+  const tipY = hp ? (hp.cy - 34 < 4 ? hp.cy + 12 : hp.cy - 34) : 0
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }} role="img" aria-label="График цен продаж">
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      style={{ width: '100%', height: 'auto', display: 'block', cursor: 'crosshair', touchAction: 'pan-y' }}
+      role="img"
+      aria-label="График цен продаж"
+      onPointerMove={onMove}
+      onPointerDown={onMove}
+      onPointerLeave={() => setHover(null)}
+    >
       {levels.map((p) => (
         <g key={p}>
           <line x1={PL} y1={y(p)} x2={W - PR} y2={y(p)} stroke="var(--border)" strokeDasharray="3 5" strokeWidth="1" />
@@ -53,13 +81,20 @@ function PriceChart({ sales }: { sales: { price: number; at: string }[] }) {
       <polygon points={`${PL},${H - PB} ${line} ${pts[pts.length - 1].cx.toFixed(1)},${H - PB}`} fill="var(--text)" opacity="0.05" />
       <polyline points={line} fill="none" stroke="var(--text)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
       {pts.map((p, i) => (
-        <circle key={i} cx={p.cx} cy={p.cy} r="3.5" fill={i === pts.length - 1 ? 'var(--text)' : 'var(--bg)'} stroke="var(--text)" strokeWidth="1.6">
-          <title>{`${rub(p.s.price)} ₽ · ${new Date(p.s.at).toLocaleDateString('ru-RU')}`}</title>
-        </circle>
+        <circle key={i} cx={p.cx} cy={p.cy} r="3.5" fill={i === pts.length - 1 ? 'var(--text)' : 'var(--bg)'} stroke="var(--text)" strokeWidth="1.6" />
       ))}
       <text x={PL} y={H - 8} fontSize="10.5" fill="var(--text-3)">{dat(times[0])}</text>
       {tSpan > 1 && (
         <text x={W - PR} y={H - 8} textAnchor="end" fontSize="10.5" fill="var(--text-3)">{dat(times[times.length - 1])}</text>
+      )}
+
+      {hp && (
+        <g pointerEvents="none">
+          <line x1={hp.cx} y1={PT} x2={hp.cx} y2={H - PB} stroke="var(--text-3)" strokeDasharray="2 4" strokeWidth="1" />
+          <circle cx={hp.cx} cy={hp.cy} r="5.5" fill="var(--text)" stroke="var(--bg-card)" strokeWidth="2" />
+          <rect x={tipX - tipW / 2} y={tipY} width={tipW} height={24} rx="8" fill="var(--bg-elev)" stroke="var(--border-strong)" />
+          <text x={tipX} y={tipY + 16} textAnchor="middle" fontSize="12" fontWeight="700" fill="var(--text)" className="tnum">{tipLabel}</text>
+        </g>
       )}
     </svg>
   )
