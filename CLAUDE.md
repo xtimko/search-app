@@ -37,7 +37,8 @@
 | Сниппет nginx (поддомен → контейнер :8080) | `deploy/nginx-stockpoisk.conf` |
 | **Фронтенд** (Vite + React + TS) | `frontend/` |
 | — точка входа React | `frontend/src/main.tsx` |
-| — дизайн-система (Ice Monochrome: Unbounded+Onest (кириллица!), белый акцент, glow-поиск `.search-hero`, классы btn/chip/card/input/page-title) | `frontend/src/styles/theme.css` |
+| — дизайн-система (Ice Monochrome: Unbounded+Onest (кириллица!), белый акцент, glow-поиск `.search-hero`, классы btn/chip/card/input/page-title; светлая тема `[data-theme='light']` — цвета ТОЛЬКО через переменные) | `frontend/src/styles/theme.css` |
+| — тема светлая/тёмная: стор + localStorage + data-theme на html (тумблер в хедере App) | `frontend/src/theme.ts` |
 | — оболочка: 2-строчный хедер (поиск в центре, категории+Бренды) + нижний таб-бар (мобайл) | `frontend/src/App.tsx` |
 | — глобальный поиск хедера с живыми подсказками (`/api/suggest`) | `frontend/src/components/HeaderSearch.tsx` |
 | — полоска «Сейчас ищут» под хедером (`/api/trends`) | `frontend/src/components/TrendsBar.tsx` |

@@ -12,6 +12,9 @@ import '@fontsource/unbounded/700.css'
 import './styles/theme.css'
 import App from './App'
 import { initVk } from './vk'
+import { initTheme } from './theme'
+
+initTheme() // тема из localStorage — до первого рендера
 
 // Пробуем получить личность из vk-bridge (внутри ВК), но не блокируем рендер
 // дольше таймаута: в обычном браузере bridge.send «висит» — рендерим по таймауту.

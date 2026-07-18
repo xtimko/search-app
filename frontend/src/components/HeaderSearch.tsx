@@ -70,7 +70,7 @@ export function HeaderSearch({
   return (
     <div ref={boxRef} style={{ position: 'relative', width: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-input)', border: '1px solid var(--border-strong)', borderRadius: 999, padding: '0 6px 0 12px', transition: 'border-color 0.2s var(--ease), box-shadow 0.2s var(--ease)' }}
-        onFocusCapture={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,255,255,0.45)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 0 18px rgba(255,255,255,0.08)' }}
+        onFocusCapture={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--focus-brd)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 0 18px var(--focus-glow)' }}
         onBlurCapture={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-strong)'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none' }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="1.8" strokeLinecap="round" aria-hidden>

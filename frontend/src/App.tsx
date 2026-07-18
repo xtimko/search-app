@@ -5,6 +5,7 @@ import { SearchPage } from './components/SearchPage'
 import { LoginGate } from './components/LoginGate'
 import { fetchAuthMe, logout, type AuthUser } from './api/auth'
 import { initFavorites, setFavoritesUnauthorizedHandler } from './favorites'
+import { useTheme, toggleTheme } from './theme'
 import { openChat, fetchUnread } from './api/chats'
 import { HeaderSearch } from './components/HeaderSearch'
 import { TrendsBar } from './components/TrendsBar'
@@ -81,6 +82,32 @@ function TabIcon({ tab }: { tab: Tab }) {
     default:
       return (<svg {...common}><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 5-5 8-5s6.5 1 8 5" /></svg>)
   }
+}
+
+// Переключатель светлой/тёмной темы (в хедере): луна ↔ солнце.
+function ThemeToggle() {
+  const theme = useTheme()
+  const dark = theme === 'dark'
+  return (
+    <button
+      className="btn btn-ghost btn-sm"
+      onClick={toggleTheme}
+      aria-label={dark ? 'включить светлую тему' : 'включить тёмную тему'}
+      title={dark ? 'светлая тема' : 'тёмная тема'}
+      style={{ padding: '4px 8px', minHeight: 32, flexShrink: 0 }}
+    >
+      {dark ? (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+          <circle cx="12" cy="12" r="4.4" />
+          <path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M19.1 4.9l-1.7 1.7M6.6 17.4l-1.7 1.7" />
+        </svg>
+      ) : (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20.4 14.2A8.4 8.4 0 0 1 9.8 3.6a8.4 8.4 0 1 0 10.6 10.6z" />
+        </svg>
+      )}
+    </button>
+  )
 }
 
 function useIsDesktop(): boolean {
@@ -257,6 +284,8 @@ export default function App() {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4.2-4.2" /></svg>
             </button>
           )}
+
+          <ThemeToggle />
 
           <div style={{ flexShrink: 0 }}>
             {authChecked && !authed && (

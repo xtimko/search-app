@@ -135,7 +135,7 @@ export function Autocomplete<T>({
                   fontSize: 14,
                   cursor: 'pointer',
                   borderRadius: 6,
-                  background: i === active ? 'rgba(163,230,53,0.12)' : 'transparent',
+                  background: i === active ? 'var(--accent-dim)' : 'transparent', // (был лайм-реликт старой палитры)
                 }}
               >
                 {renderItem ? renderItem(item) : getLabel(item)}
