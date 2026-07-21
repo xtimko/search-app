@@ -21,12 +21,33 @@ async function photoFallback(modelIds: number[]): Promise<Map<number, string>> {
   return map
 }
 
-// Карточки каталога по списку id: агрегаты живых офферов + фото-фолбэк,
-// порядок ids сохраняется, модели без живых офферов остаются (нулевые агрегаты).
-// Экспорт — для «Слежу» (favorites.ts) и других списков карточек.
+// Расцветки живых офферов по моделям (уникальные, до 6 на модель) — реселлеры
+// различают модели прежде всего по расцветке, карточка обязана её показывать.
+// extraWhere — те же офферные фильтры, что применялись к выдаче.
+async function colorwaysByModel(modelIds: number[], extraWhere: Prisma.ListingWhereInput = {}): Promise<Map<number, string[]>> {
+  const map = new Map<number, string[]>()
+  if (!modelIds.length) return map
+  const rows = await prisma.listing.findMany({
+    where: { ...LIVE, ...extraWhere, modelId: { in: modelIds }, colorway: { not: null } },
+    select: { modelId: true, colorway: true },
+    distinct: ['modelId', 'colorway'],
+    orderBy: { createdAt: 'desc' },
+  })
+  for (const r of rows) {
+    if (!r.colorway) continue
+    const list = map.get(r.modelId) ?? []
+    if (list.length < 6) list.push(r.colorway)
+    map.set(r.modelId, list)
+  }
+  return map
+}
+
+// Карточки каталога по списку id: агрегаты живых офферов + фото-фолбэк +
+// расцветки; порядок ids сохраняется, модели без живых офферов остаются
+// (нулевые агрегаты). Экспорт — для «Слежу» (favorites.ts) и списков карточек.
 export async function cardsByIds(ids: number[]) {
   if (!ids.length) return []
-  const [groups, models] = await Promise.all([
+  const [groups, models, colors] = await Promise.all([
     prisma.listing.groupBy({
       by: ['modelId'],
       where: { ...LIVE, modelId: { in: ids } },
@@ -36,11 +57,12 @@ export async function cardsByIds(ids: number[]) {
     prisma.model.findMany({
       where: { id: { in: ids } },
       select: {
-        id: true, name: true, sku: true, status: true, imageUrl: true, retailPrice: true,
+        id: true, name: true, sku: true, status: true, imageUrl: true, retailPrice: true, colorway: true,
         brand: { select: { name: true } },
         category: { select: { name: true, slug: true } },
       },
     }),
+    colorwaysByModel(ids),
   ])
   const agg = new Map(groups.map((g) => [g.modelId, g]))
   const photos = await photoFallback(models.filter((m) => !m.imageUrl).map((m) => m.id))
@@ -52,6 +74,7 @@ export async function cardsByIds(ids: number[]) {
         photo: m.imageUrl ?? photos.get(m.id) ?? null,
         minPrice: agg.get(m.id)?._min.price ?? null,
         offersCount: agg.get(m.id)?._count ?? 0,
+        colorways: colors.get(m.id) ?? [],
       },
     ]),
   )
@@ -148,13 +171,17 @@ export async function catalogRoutes(app: FastifyInstance) {
     const models = await prisma.model.findMany({
       where: { id: { in: ids }, ...(catIds ? { categoryId: { in: catIds } } : {}), ...(brandIds.length ? { brandId: { in: brandIds } } : {}) },
       select: {
-        id: true, name: true, sku: true, status: true, imageUrl: true, retailPrice: true,
+        id: true, name: true, sku: true, status: true, imageUrl: true, retailPrice: true, colorway: true,
         brand: { select: { name: true } },
         category: { select: { name: true, slug: true } },
       },
     })
 
-    const photoByModel = await photoFallback(models.filter((m) => !m.imageUrl).map((m) => m.id))
+    const [photoByModel, colorsByModel] = await Promise.all([
+      photoFallback(models.filter((m) => !m.imageUrl).map((m) => m.id)),
+      // расцветки — по тем же офферным фильтрам, что и выдача (size/цена/состояние)
+      colorwaysByModel(models.map((m) => m.id), offerWhere),
+    ])
 
     const items = models.map((m) => {
       const g = aggByModel.get(m.id)
@@ -163,6 +190,7 @@ export async function catalogRoutes(app: FastifyInstance) {
         photo: m.imageUrl ?? photoByModel.get(m.id) ?? null,
         minPrice: g?._min.price ?? null,
         offersCount: g?._count ?? 0,
+        colorways: colorsByModel.get(m.id) ?? [],
         lastAdded: g?._max.createdAt ?? null,
       }
     })
@@ -380,25 +408,19 @@ export async function catalogRoutes(app: FastifyInstance) {
     const relGroups = await prisma.listing.groupBy({
       by: ['modelId'],
       where: { ...LIVE, modelId: { not: id }, model: { OR: [{ brandId: model.brandId }, { categoryId: model.categoryId }] } },
-      _min: { price: true },
       _count: true,
     })
     const relAgg = new Map(relGroups.map((g) => [g.modelId, g]))
-    const relModels = await prisma.model.findMany({
+    const relBrands = await prisma.model.findMany({
       where: { id: { in: relGroups.map((g) => g.modelId) } },
-      select: {
-        id: true, name: true, sku: true, status: true, imageUrl: true, retailPrice: true, brandId: true,
-        brand: { select: { name: true } },
-        category: { select: { name: true, slug: true } },
-      },
+      select: { id: true, brandId: true },
     })
-    relModels.sort((a, b) => {
+    relBrands.sort((a, b) => {
       const brandDiff = Number(b.brandId === model.brandId) - Number(a.brandId === model.brandId)
       if (brandDiff !== 0) return brandDiff
       return (relAgg.get(b.id)?._count ?? 0) - (relAgg.get(a.id)?._count ?? 0)
     })
-    const relTop = relModels.slice(0, 8)
-    const relPhotos = await photoFallback(relTop.filter((m) => !m.imageUrl).map((m) => m.id))
+    const related = await cardsByIds(relBrands.slice(0, 8).map((m) => m.id))
 
     return {
       model,
@@ -408,12 +430,7 @@ export async function catalogRoutes(app: FastifyInstance) {
       // история продаж для графика: [{price, at}], старые → новые
       sales: sales.map((s) => ({ price: s.price, at: s.closedAt })),
       activeRequests: requestsCount,
-      related: relTop.map((m) => ({
-        model: m,
-        photo: m.imageUrl ?? relPhotos.get(m.id) ?? null,
-        minPrice: relAgg.get(m.id)?._min.price ?? null,
-        offersCount: relAgg.get(m.id)?._count ?? 0,
-      })),
+      related,
       offers: offers.map((o) => ({
         ...o,
         seller: {

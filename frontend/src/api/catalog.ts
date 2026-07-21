@@ -26,6 +26,7 @@ export interface CatalogItem {
   photo: string | null // фото модели или фолбэк из объявления
   minPrice: number | null
   offersCount: number
+  colorways?: string[] // расцветки живых офферов (реселлеры различают модели по ним)
 }
 
 export interface Offer {
