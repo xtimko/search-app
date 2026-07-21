@@ -47,11 +47,16 @@ export const TR_TO = 'abvgdeejziiklmnoprstufhccssyeuaabvgdeejziiklmnoprstufhccss
 // Релевантный подбор моделей под текст запроса (pg_trgm).
 // Возвращает Map<modelId, score>: точные/префиксные/алиасные совпадения — выше,
 // затем нечёткие (устойчивы к опечаткам и сокращениям). score примерно 0..2.3.
+// Документ модели включает РАСЦВЕТКИ её живых офферов и паспортную — так
+// коллабы и расцветки находятся «с обеих сторон»: «jordan 1 low» находит
+// коллаб-модель TS, «travis scott» / «mocha» подтягивают базовую модель,
+// у которой есть такой оффер. Расцветки стоят сразу после имени модели,
+// чтобы окно похожести «имя + расцветка» было компактным.
 export async function matchModels(text: string): Promise<Map<number, number>> {
   const q = text.trim().toLowerCase()
   if (q.length < 2) return new Map()
 
-  // doc = бренд + модель + алиасы (модели и бренда) + артикул — единая строка для похожести.
+  // doc = бренд + модель + расцветки (живые офферы + паспорт) + алиасы + артикул.
   const rows = await prisma.$queryRaw<{ id: number; score: number }[]>`
     SELECT m.id::int AS id,
       (
@@ -62,8 +67,16 @@ export async function matchModels(text: string): Promise<Map<number, number>> {
       )::float8 AS score
     FROM "Model" m
     JOIN "Brand" b ON b.id = m."brandId"
+    LEFT JOIN LATERAL (
+      SELECT string_agg(DISTINCT l.colorway, ' ') AS d
+      FROM "Listing" l
+      JOIN "Seller" s ON s.id = l."sellerId" AND s.status = 'approved'
+      WHERE l."modelId" = m.id AND l."inStock" AND NOT l.reserved AND l.colorway IS NOT NULL
+    ) cw ON true
     CROSS JOIN LATERAL (
       SELECT b.name || ' ' || m.name || ' '
+        || coalesce(cw.d, '') || ' '
+        || coalesce(m.colorway, '') || ' '
         || coalesce(array_to_string(m.aliases, ' '), '') || ' '
         || coalesce(array_to_string(b.aliases, ' '), '') || ' '
         || coalesce(m.sku, '') AS d
@@ -84,13 +97,23 @@ export async function matchModels(text: string): Promise<Map<number, number>> {
 async function matchModelLoose(text: string): Promise<number | null> {
   const q = text.trim().toLowerCase()
   if (q.length < 4) return null // короткий мусор не атрибуцируем
+  // Документ — как в matchModels (включая расцветки), чтобы атрибуция спроса
+  // была консистентна с выдачей.
   const rows = await prisma.$queryRaw<{ id: number }[]>`
     SELECT m.id::int AS id
     FROM "Model" m
     JOIN "Brand" b ON b.id = m."brandId"
+    LEFT JOIN LATERAL (
+      SELECT string_agg(DISTINCT l.colorway, ' ') AS d
+      FROM "Listing" l
+      JOIN "Seller" s ON s.id = l."sellerId" AND s.status = 'approved'
+      WHERE l."modelId" = m.id AND l."inStock" AND NOT l.reserved AND l.colorway IS NOT NULL
+    ) cw ON true
     CROSS JOIN LATERAL (
       SELECT lower(translate(
         b.name || ' ' || m.name || ' '
+        || coalesce(cw.d, '') || ' '
+        || coalesce(m.colorway, '') || ' '
         || coalesce(array_to_string(m.aliases, ' '), '') || ' '
         || coalesce(array_to_string(b.aliases, ' '), '') || ' '
         || coalesce(m.sku, ''), ${TR_FROM}, ${TR_TO})) AS d
