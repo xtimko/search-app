@@ -3,7 +3,7 @@ import { fetchMe, updateMe, type SellerProfile } from '../api/seller'
 
 const STATUS: Record<SellerProfile['status'], { text: string; cls: string }> = {
   pending: { text: 'на модерации', cls: 'text-2' },
-  approved: { text: '✓ проверенный', cls: 'text-success' },
+  approved: { text: 'магазин активен', cls: 'text-success' },
   blocked: { text: 'заблокирован', cls: 'text-danger' },
 }
 

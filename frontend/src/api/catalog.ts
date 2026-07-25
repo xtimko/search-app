@@ -48,6 +48,7 @@ export interface Offer {
     photo: string | null
     contact: string
     status: string
+    verified: boolean // официальный/подтверждённый (Слой 2)
     rating: number | null
     reviewsCount: number
     dealsCompleted: number

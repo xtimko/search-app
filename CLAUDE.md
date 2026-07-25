@@ -61,7 +61,8 @@
 | — клиент авторизации VK ID (`/api/auth/*`) | `frontend/src/api/auth.ts` |
 | — клиент чатов и сделок (`/api/chats*`, `/api/deals*`) | `frontend/src/api/chats.ts` |
 | — клиент публичного профиля продавца | `frontend/src/api/sellers.ts` |
-| — мини-профиль продавца (модал: метрики, отзывы, товары) | `frontend/src/components/SellerModal.tsx` |
+| — мини-профиль продавца (модал: галочка «Проверенный», неподделываемая VK-ссылка, метрики, отзывы, товары) | `frontend/src/components/SellerModal.tsx` |
+| — знак «официальный/подтверждённый» + `vkProfileUrl(vkId)` (защита от клонов) | `frontend/src/components/VerifiedBadge.tsx` |
 | — доска запросов: форма + лента + отклик (`RequestsPage`) | `frontend/src/components/RequestsPage.tsx` |
 | — клиент доски запросов | `frontend/src/api/requests.ts` |
 | — раздел «Аналитика спроса» (PRO): дефицит, что ищут, продажи, unmet | `frontend/src/components/AnalyticsPage.tsx` |
@@ -106,7 +107,7 @@
 | — массовый импорт: `POST /api/import/preview`/`commit` | `backend/src/routes/import.ts` |
 | — профиль продавца: `GET`/`PATCH /api/seller/me` | `backend/src/routes/seller.ts` |
 | — админка: модерация + справочник + карточки моделей (`GET/POST/PATCH/DELETE /api/admin/models`) | `backend/src/routes/admin.ts` |
-| **Схема БД** (PostgreSQL): Category(дерево), Brand, Model(+sku/status/imageUrl+паспорт: colorway/retailPrice/releaseYear/description), Listing, Seller, Favorite(«Слежу»), Conversation, Message, Deal, Review, Request(+Response), SearchLog | `prisma/schema.prisma` |
+| **Схема БД** (PostgreSQL): Category(дерево), Brand, Model(+sku/status/imageUrl+паспорт: colorway/retailPrice/releaseYear/description), Listing, Seller(+verified — «официальный», защита от клонов), Favorite(«Слежу»), Conversation, Message, Deal, Review, Request(+Response), SearchLog | `prisma/schema.prisma` |
 | История миграций (init + catalog_revision) | `prisma/migrations/` |
 | Seed справочника (категории + бренды + модели, с алиасами) | `prisma/seed.ts` |
 | Анализ реального чата запросов (спрос, форматы) | `docs/research/vk_chat_analysis.md` |

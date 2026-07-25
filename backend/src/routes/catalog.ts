@@ -380,7 +380,7 @@ export async function catalogRoutes(app: FastifyInstance) {
         select: {
           id: true, sizeUs: true, sizeEu: true, size: true, colorway: true,
           condition: true, hasBox: true, fitting: true, price: true, city: true, photo: true,
-          seller: { select: { id: true, nick: true, vkName: true, photo: true, contact: true, status: true } },
+          seller: { select: { id: true, nick: true, vkName: true, photo: true, contact: true, status: true, verified: true } },
         },
       }),
       // Все завершённые сделки по модели (для графика цен), старые → новые.

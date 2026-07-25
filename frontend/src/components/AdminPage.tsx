@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Autocomplete } from './Autocomplete'
 import { fetchCategories, fetchBrands, type Brand, type Category } from '../api/directory'
-import { fetchSellers, setSellerStatus, addBrand, addModel, type AdminSeller } from '../api/admin'
+import { fetchSellers, setSellerStatus, setSellerVerified, addBrand, addModel, type AdminSeller } from '../api/admin'
 import { PhotoPicker } from './PhotoPicker'
 import { AdminModelCards } from './AdminModelCards'
+import { VerifiedBadge, vkProfileUrl } from './VerifiedBadge'
 
 const STATUS: Record<AdminSeller['status'], { text: string; cls: string }> = {
   pending: { text: 'на модерации', cls: 'text-2' },
-  approved: { text: 'проверенный', cls: 'text-success' },
+  approved: { text: 'магазин активен', cls: 'text-success' },
   blocked: { text: 'заблокирован', cls: 'text-danger' },
 }
 
@@ -39,6 +40,11 @@ export function AdminPage() {
 
   async function changeStatus(id: number, status: AdminSeller['status']) {
     await setSellerStatus(id, status).catch((e) => setError((e as Error).message))
+    loadSellers()
+  }
+
+  async function changeVerified(id: number, verified: boolean) {
+    await setSellerVerified(id, verified).catch((e) => setError((e as Error).message))
     loadSellers()
   }
 
@@ -96,16 +102,29 @@ export function AdminPage() {
           const st = STATUS[s.status]
           return (
             <div key={s.id} className="card">
-              <div style={{ fontWeight: 700 }}>
-                {s.nick} <span className="text-3" style={{ fontWeight: 400 }}>· vk {s.vkId} · позиций: {s._count.listings}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, flexWrap: 'wrap' }}>
+                {s.vkName || s.nick}
+                {s.verified && <VerifiedBadge size={15} />}
+                <span className="text-3" style={{ fontWeight: 400 }}>· позиций: {s._count.listings}</span>
               </div>
-              <div className="text-2" style={{ fontSize: 13, margin: '2px 0 10px' }}>
+              <div className="text-2" style={{ fontSize: 13, margin: '2px 0 6px' }}>
                 {s.contact}
                 {s.city && ` · ${s.city}`} · <span className={st.cls} style={{ fontWeight: 600 }}>{st.text}</span>
               </div>
+              {/* Неподделываемая страница ВК — открой и сверь, что это настоящий человек, перед «Официальный» */}
+              <a href={vkProfileUrl(s.vkId)} target="_blank" rel="noopener noreferrer" className="text-2" style={{ fontSize: 12, display: 'inline-block', marginBottom: 10 }}>
+                🔗 vk.com/id{s.vkId} — проверить страницу
+              </a>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button className="btn btn-outline btn-sm" disabled={s.status === 'approved'} onClick={() => changeStatus(s.id, 'approved')}>
                   Одобрить
+                </button>
+                <button
+                  className={s.verified ? 'btn btn-ghost btn-sm' : 'btn btn-primary btn-sm'}
+                  onClick={() => changeVerified(s.id, !s.verified)}
+                  title="Официальный = подтверждаешь, что это тот самый человек (защита от клонов)"
+                >
+                  {s.verified ? 'Снять «официальный»' : '✓ Сделать официальным'}
                 </button>
                 <button className="btn btn-danger btn-sm" disabled={s.status === 'blocked'} onClick={() => changeStatus(s.id, 'blocked')}>
                   Заблокировать

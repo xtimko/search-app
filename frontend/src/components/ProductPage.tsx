@@ -5,6 +5,7 @@ import { getRecentIds, pushRecentId } from '../recent'
 import { SellerModal } from './SellerModal'
 import { CardRow } from './CardRow'
 import { HeartButton } from './ProductCard'
+import { VerifiedBadge } from './VerifiedBadge'
 
 // Кликабельное звено хлебных крошек.
 function Crumb({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
@@ -295,11 +296,13 @@ export function ProductPage({
                     {o.fitting && ' · примерка'}
                     {o.city && ` · ${o.city}`}
                   </div>
-                  <div className="text-3" style={{ fontSize: 12, cursor: 'pointer', marginTop: 2 }} onClick={() => setSellerId(o.seller.id)}>
+                  <div className="text-3" style={{ fontSize: 12, cursor: 'pointer', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }} onClick={() => setSellerId(o.seller.id)}>
                     <span style={{ textDecoration: 'underline dotted' }}>{o.seller.vkName || o.seller.nick}</span>
-                    {o.seller.status === 'approved' && <span className="text-success"> ✓</span>}
-                    {o.seller.rating != null && <span> ★{o.seller.rating}{o.seller.reviewsCount ? ` (${o.seller.reviewsCount})` : ''}</span>}
-                    {o.seller.dealsCompleted > 0 && ` · ${o.seller.dealsCompleted} сд.`}
+                    {o.seller.verified && <VerifiedBadge size={14} />}
+                    <span>
+                      {o.seller.rating != null && <>★{o.seller.rating}{o.seller.reviewsCount ? ` (${o.seller.reviewsCount})` : ''}</>}
+                      {o.seller.dealsCompleted > 0 && ` · ${o.seller.dealsCompleted} сд.`}
+                    </span>
                   </div>
                 </div>
                 <button className="btn btn-primary btn-sm" onClick={() => onContact(o.id, o.seller.contact)}>Написать</button>

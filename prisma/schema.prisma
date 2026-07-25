@@ -286,7 +286,8 @@ model Seller {
   city        String?
   experience  String? // стаж
   description String?
-  status      SellerStatus @default(pending)
+  status      SellerStatus @default(pending) // модерация: pending/approved(магазин активен)/blocked
+  verified    Boolean      @default(false) // «официальный/подтверждённый» — админ подтвердил, что это тот самый человек (защита от клонов). Ставится вручную поверх approved.
   listings    Listing[]
   buyerConversations  Conversation[] @relation("buyerConversations")
   sellerConversations Conversation[] @relation("sellerConversations")

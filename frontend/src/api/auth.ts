@@ -11,6 +11,7 @@ export interface AuthUser {
   experience: string | null
   description: string | null
   status: 'pending' | 'approved' | 'blocked'
+  verified: boolean // официальный/подтверждённый (Слой 2)
   dev: boolean
 }
 

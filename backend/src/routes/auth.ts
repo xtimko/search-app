@@ -38,6 +38,7 @@ const sellerSelect = {
   experience: true,
   description: true,
   status: true,
+  verified: true,
 } as const
 
 export async function authRoutes(app: FastifyInstance) {

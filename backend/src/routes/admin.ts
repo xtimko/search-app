@@ -19,26 +19,38 @@ export async function adminRoutes(app: FastifyInstance) {
         id: true,
         vkId: true,
         nick: true,
+        vkName: true,
+        photo: true,
         contact: true,
         city: true,
         status: true,
+        verified: true,
         _count: { select: { listings: true } },
       },
     })
     return sellers.map((s) => ({ ...s, vkId: s.vkId.toString() }))
   })
 
-  // PATCH /api/admin/sellers/:id — сменить статус модерации.
+  // PATCH /api/admin/sellers/:id — сменить статус модерации и/или отметку
+  // «официальный» (verified). Передаём только меняемые поля.
   app.patch<{ Params: { id: string } }>('/api/admin/sellers/:id', async (req, reply) => {
     const id = Number(req.params.id)
-    const status = (req.body as { status?: string })?.status
-    if (!['pending', 'approved', 'blocked'].includes(status || '')) {
-      return reply.code(400).send({ error: 'status: pending | approved | blocked' })
+    const b = (req.body ?? {}) as { status?: string; verified?: boolean }
+    const data: { status?: 'pending' | 'approved' | 'blocked'; verified?: boolean } = {}
+
+    if (b.status !== undefined) {
+      if (!['pending', 'approved', 'blocked'].includes(b.status)) {
+        return reply.code(400).send({ error: 'status: pending | approved | blocked' })
+      }
+      data.status = b.status as 'pending' | 'approved' | 'blocked'
     }
+    if (typeof b.verified === 'boolean') data.verified = b.verified
+    if (Object.keys(data).length === 0) return reply.code(400).send({ error: 'нечего менять' })
+
     return prisma.seller.update({
       where: { id },
-      data: { status: status as 'pending' | 'approved' | 'blocked' },
-      select: { id: true, nick: true, status: true },
+      data,
+      select: { id: true, nick: true, status: true, verified: true },
     })
   })
 

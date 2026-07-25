@@ -4,7 +4,7 @@ import { getCurrentSellerId } from './listings'
 
 // Встроенные чаты: диалог привязан к товару, обновление — поллингом с фронта.
 
-const peerSelect = { id: true, nick: true, vkName: true, photo: true, status: true } as const
+const peerSelect = { id: true, nick: true, vkName: true, photo: true, status: true, verified: true } as const
 
 const convInclude = (me: number) =>
   ({

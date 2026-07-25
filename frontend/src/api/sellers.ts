@@ -30,6 +30,7 @@ export interface SellerListing {
 export interface SellerProfile {
   seller: {
     id: number
+    vkId: string // страница ВК: vk.com/id{vkId} (неподделываемая, из входа)
     nick: string
     vkName: string | null
     photo: string | null
@@ -37,6 +38,7 @@ export interface SellerProfile {
     experience: string | null
     description: string | null
     status: 'pending' | 'approved' | 'blocked'
+    verified: boolean // официальный/подтверждённый (Слой 2)
     createdAt: string
   }
   stats: SellerStats

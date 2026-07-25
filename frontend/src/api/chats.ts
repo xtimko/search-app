@@ -6,6 +6,7 @@ export interface ChatPeer {
   vkName: string | null
   photo: string | null
   status: 'pending' | 'approved' | 'blocked'
+  verified: boolean
 }
 
 export interface ChatListing {

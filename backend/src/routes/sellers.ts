@@ -61,10 +61,11 @@ export async function sellerRoutesPublic(app: FastifyInstance) {
   // GET /api/sellers/:id/profile — публичная карточка продавца.
   app.get<{ Params: { id: string } }>('/api/sellers/:id/profile', async (req, reply) => {
     const id = Number(req.params.id)
-    const seller = await prisma.seller.findUnique({
+    const row = await prisma.seller.findUnique({
       where: { id },
       select: {
         id: true,
+        vkId: true, // для неподделываемой ссылки на страницу ВК (Слой 1)
         nick: true,
         vkName: true,
         photo: true,
@@ -72,10 +73,13 @@ export async function sellerRoutesPublic(app: FastifyInstance) {
         experience: true,
         description: true,
         status: true,
+        verified: true,
         createdAt: true,
       },
     })
-    if (!seller) return reply.code(404).send({ error: 'продавец не найден' })
+    if (!row) return reply.code(404).send({ error: 'продавец не найден' })
+    // vkId — BigInt, в JSON отдаём строкой; наружу — как vkProfileUrl.
+    const seller = { ...row, vkId: row.vkId.toString() }
 
     const [stats, reviews, listings] = await Promise.all([
       computeSellerStats(id),

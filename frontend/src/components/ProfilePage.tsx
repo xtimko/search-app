@@ -6,12 +6,13 @@ import { fetchSellerProfile, responseLabel, type SellerProfile } from '../api/se
 import { fetchDeals, type DealFull } from '../api/chats'
 import { fetchFavorites } from '../api/favorites'
 import { useFavoritesVersion } from '../favorites'
+import { VerifiedBadge } from './VerifiedBadge'
 import type { CatalogItem } from '../api/catalog'
 import { CardRow } from './CardRow'
 
 const STATUS: Record<AuthUser['status'], { text: string; cls: string }> = {
   pending: { text: 'на модерации', cls: 'text-2' },
-  approved: { text: '✓ проверенный', cls: 'text-success' },
+  approved: { text: 'магазин активен', cls: 'text-success' },
   blocked: { text: 'заблокирован', cls: 'text-danger' },
 }
 
@@ -55,9 +56,10 @@ export function ProfilePage({ auth, onLogout, onOpenChat, onOpenAnalytics }: { a
           <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--bg-elev)' }} />
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: 16 }}>
-            {auth.vkName || auth.nick}
-            {auth.dev && <span className="text-3" style={{ fontWeight: 400 }}> (dev-режим)</span>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 800, fontSize: 16 }}>{auth.vkName || auth.nick}</span>
+            {auth.verified && <VerifiedBadge label />}
+            {auth.dev && <span className="text-3" style={{ fontWeight: 400 }}>(dev-режим)</span>}
           </div>
           <div className="text-3" style={{ fontSize: 12 }}>
             аккаунт ВКонтакте · <span className={st.cls} style={{ fontWeight: 600 }}>{st.text}</span>

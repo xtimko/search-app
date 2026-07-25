@@ -216,7 +216,7 @@ export async function searchRoutes(app: FastifyInstance) {
           },
         },
         seller: {
-          select: { id: true, nick: true, vkName: true, photo: true, contact: true, city: true, experience: true, status: true },
+          select: { id: true, nick: true, vkName: true, photo: true, contact: true, city: true, experience: true, status: true, verified: true },
         },
       },
     })

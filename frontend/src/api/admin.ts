@@ -10,9 +10,12 @@ export interface AdminSeller {
   id: number
   vkId: string
   nick: string
+  vkName: string | null
+  photo: string | null
   contact: string
   city: string | null
   status: 'pending' | 'approved' | 'blocked'
+  verified: boolean
   _count: { listings: number }
 }
 
@@ -27,6 +30,17 @@ export async function setSellerStatus(id: number, status: 'pending' | 'approved'
     method: 'PATCH',
     headers: headers(),
     body: JSON.stringify({ status }),
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+// Отметка «официальный/подтверждённый» (Слой 2) — независимо от статуса модерации.
+export async function setSellerVerified(id: number, verified: boolean) {
+  const res = await fetch(`/api/admin/sellers/${id}`, {
+    method: 'PATCH',
+    headers: headers(),
+    body: JSON.stringify({ verified }),
   })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()

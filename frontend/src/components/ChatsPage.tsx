@@ -16,6 +16,7 @@ import {
   type ChatPeer,
   type DealFull,
 } from '../api/chats'
+import { VerifiedBadge } from './VerifiedBadge'
 
 function useIsDesktop(): boolean {
   const [d, setD] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 900)
@@ -398,9 +399,9 @@ export function ChatsPage({ meId, initialChatId }: { meId: number; initialChatId
           )}
           <Avatar p={peerOf(active, meId)} size={32} />
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 700, fontSize: 14 }}>
               {peerOf(active, meId).vkName || peerOf(active, meId).nick}
-              {peerOf(active, meId).status === 'approved' && <span className="text-success"> ✓</span>}
+              {peerOf(active, meId).verified && <VerifiedBadge size={14} />}
             </div>
             <div className="text-3" style={{ fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {listingLabel(active)}
