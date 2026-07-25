@@ -97,24 +97,28 @@ export async function authRoutes(app: FastifyInstance) {
       if (serviceToken) body.set('service_token', serviceToken)
 
       try {
+        // Таймаут на запросы к VK: иначе при недоступности id.vk.ru колбэк
+        // висит бесконечно (браузер «крутит»), вместо понятной ошибки.
         const tokenRes = await fetch(VKID_TOKEN, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body,
+          signal: AbortSignal.timeout(10_000),
         })
         // Ответ содержит access_token, refresh_token, id_token, expires_in, user_id…
         // Нам нужен только профиль при входе — refresh/id-токены не храним
         // (сессия самодостаточна; id-token несёт лишь маскированные данные).
         const token = (await tokenRes.json()) as { access_token?: string; user_id?: string | number; error?: string; error_description?: string }
         if (!token.access_token || token.user_id == null) {
-          req.log.error({ token }, 'vk id: обмен кода не удался')
-          return reply.redirect('/?auth=failed')
+          req.log.error({ status: tokenRes.status, token }, 'vk id: обмен кода не удался')
+          return reply.redirect('/?auth=failed&reason=token')
         }
 
         const infoRes = await fetch(VKID_USERINFO, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({ access_token: token.access_token, client_id: clientId }),
+          signal: AbortSignal.timeout(10_000),
         })
         const info = (await infoRes.json()) as {
           user?: { first_name?: string; last_name?: string; avatar?: string }
@@ -145,8 +149,10 @@ export async function authRoutes(app: FastifyInstance) {
         })
         return reply.redirect('/')
       } catch (e) {
-        req.log.error(e, 'vk id: ошибка обмена')
-        return reply.redirect('/?auth=failed')
+        // Таймаут/сеть до id.vk.ru или неожиданный ответ — не висим, а падаем с логом.
+        const reason = e instanceof Error && e.name === 'TimeoutError' ? 'timeout' : 'exchange'
+        req.log.error({ err: e, reason }, 'vk id: ошибка обмена')
+        return reply.redirect(`/?auth=failed&reason=${reason}`)
       }
     },
   )
