@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useNavigate, useLocation, useParams, useSearch
 import { HomePage } from './components/HomePage'
 import { SearchPage } from './components/SearchPage'
 import { LoginGate } from './components/LoginGate'
-import { fetchAuthMe, logout, type AuthUser } from './api/auth'
+import { fetchAuthMe, logout, loginUrl, type AuthUser } from './api/auth'
 import { initFavorites, setFavoritesUnauthorizedHandler } from './favorites'
 import { useTheme, toggleTheme } from './theme'
 import { openChat, fetchUnread } from './api/chats'
@@ -289,7 +289,7 @@ export default function App() {
 
           <div style={{ flexShrink: 0 }}>
             {authChecked && !authed && (
-              <button className="btn btn-vk btn-sm" onClick={() => navigate('/profile')}>Войти</button>
+              <a className="btn btn-vk btn-sm" href={loginUrl()}>Войти</a>
             )}
             {authed && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={() => navigate('/profile')} title="профиль">
@@ -359,6 +359,16 @@ export default function App() {
           </div>
         )}
       </header>
+
+      {/* Отказ VK ID на колбэке (?auth=failed) — понятное сообщение вместо тишины */}
+      {new URLSearchParams(location.search).get('auth') === 'failed' && (
+        <div style={{ background: 'var(--danger)', color: '#fff' }}>
+          <div style={{ maxWidth: 1080, margin: '0 auto', padding: '9px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, fontSize: 13.5 }}>
+            <span>Не удалось войти через ВКонтакте. Попробуйте ещё раз.</span>
+            <a className="btn btn-sm" href={loginUrl()} style={{ background: '#fff', color: 'var(--danger)', flexShrink: 0 }}>Повторить</a>
+          </div>
+        </div>
+      )}
 
       {/* полоска трендов (все устройства) */}
       <TrendsBar onOpenProduct={openProduct} />

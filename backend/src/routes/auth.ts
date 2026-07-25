@@ -155,12 +155,12 @@ export async function authRoutes(app: FastifyInstance) {
     return { ok: true }
   })
 
-  // ВРЕМЕННО (до подключения VK ID): тестовый вход по имени. Включён по умолчанию;
-  // выключение — ALLOW_TEST_LOGIN=0 (сделать при запуске VK ID). vkId — из дальнего
-  // диапазона (9e12+), чтобы не пересечься с реальными VK ID. Повторный вход
-  // с тем же именем возвращает тот же тестовый аккаунт.
+  // Тестовый вход по имени. ВЫКЛЮЧЕН по умолчанию (VK ID подключён) — включается
+  // только явным ALLOW_TEST_LOGIN=1 (аварийный доступ на время проверки VK).
+  // vkId — из дальнего диапазона (9e12+), чтобы не пересечься с реальными VK ID.
+  // Повторный вход с тем же именем возвращает тот же тестовый аккаунт.
   app.post('/api/auth/test-login', async (req, reply) => {
-    const enabled = process.env.ALLOW_TEST_LOGIN !== '0'
+    const enabled = process.env.ALLOW_TEST_LOGIN === '1'
     if (!enabled) return reply.code(403).send({ error: 'тестовый вход отключён' })
 
     const name = String((req.body as { name?: string })?.name ?? '').trim().slice(0, 40)
