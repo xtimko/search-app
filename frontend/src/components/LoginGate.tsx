@@ -62,6 +62,12 @@ export function LoginGate({ what }: { what: string }) {
       <div className="hint" style={{ textAlign: 'left', marginTop: 10 }}>
         Берём только имя и фото профиля — чтобы показать вас покупателям. Пароль не запрашиваем.
       </div>
+      <div className="hint" style={{ textAlign: 'left', marginTop: 8 }}>
+        Нажимая «Войти», вы принимаете{' '}
+        <a href="/terms" target="_blank" rel="noopener noreferrer">Пользовательское соглашение</a>{' '}и{' '}
+        <a href="/privacy" target="_blank" rel="noopener noreferrer">Политику конфиденциальности</a>{' '}
+        и даёте согласие на обработку персональных данных.
+      </div>
 
       {import.meta.env.DEV && <DevTestLogin />}
     </div>

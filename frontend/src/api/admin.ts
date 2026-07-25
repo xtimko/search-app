@@ -16,6 +16,7 @@ export interface AdminSeller {
   city: string | null
   status: 'pending' | 'approved' | 'blocked'
   verified: boolean
+  similarToVerified: string | null // имя проверенного продавца, на которого похож (вероятный клон)
   _count: { listings: number }
 }
 

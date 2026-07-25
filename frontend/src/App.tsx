@@ -21,6 +21,7 @@ const ChatsPage = lazy(() => import('./components/ChatsPage').then((m) => ({ def
 const RequestsPage = lazy(() => import('./components/RequestsPage').then((m) => ({ default: m.RequestsPage })))
 const AnalyticsPage = lazy(() => import('./components/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })))
 const BrandPage = lazy(() => import('./components/BrandPage').then((m) => ({ default: m.BrandPage })))
+const LegalPage = lazy(() => import('./components/LegalPage').then((m) => ({ default: m.LegalPage })))
 
 export type Tab = 'home' | 'search' | 'requests' | 'chats' | 'seller' | 'analytics' | 'profile' | 'admin'
 
@@ -386,14 +387,20 @@ export default function App() {
             <Route path="/analytics" element={<Gate authed={authed} authChecked={authChecked} what="Аналитика спроса"><AnalyticsPage /></Gate>} />
             <Route path="/profile" element={<Gate authed={authed} authChecked={authChecked} what="Раздел «Профиль»">{auth && <ProfilePage auth={auth} onLogout={onLogout} onOpenChat={goChat} onOpenAnalytics={() => navigate('/analytics')} />}</Gate>} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/privacy" element={<LegalPage doc="privacy" />} />
+            <Route path="/terms" element={<LegalPage doc="terms" />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
       </main>
 
       {isDesktop && (
-        <footer style={{ borderTop: '1px solid var(--border)', padding: '18px 16px', textAlign: 'center' }}>
+        <footer style={{ borderTop: '1px solid var(--border)', padding: '18px 16px', textAlign: 'center', display: 'grid', gap: 6 }}>
           <span className="text-3" style={{ fontSize: 12 }}>Search-app — агрегатор стока реселлеров. Сделки и оплата — напрямую между пользователями.</span>
+          <div style={{ display: 'flex', gap: 14, justifyContent: 'center' }}>
+            <button className="text-3" style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }} onClick={() => navigate('/privacy')}>Политика конфиденциальности</button>
+            <button className="text-3" style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }} onClick={() => navigate('/terms')}>Пользовательское соглашение</button>
+          </div>
         </footer>
       )}
 

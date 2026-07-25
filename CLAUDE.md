@@ -63,6 +63,7 @@
 | — клиент публичного профиля продавца | `frontend/src/api/sellers.ts` |
 | — мини-профиль продавца (модал: галочка «Проверенный», неподделываемая VK-ссылка, метрики, отзывы, товары) | `frontend/src/components/SellerModal.tsx` |
 | — знак «официальный/подтверждённый» + `vkProfileUrl(vkId)` (защита от клонов) | `frontend/src/components/VerifiedBadge.tsx` |
+| — юр-страницы `/privacy` и `/terms` (152-ФЗ; реквизиты оператора — плейсхолдеры) | `frontend/src/components/LegalPage.tsx` |
 | — доска запросов: форма + лента + отклик (`RequestsPage`) | `frontend/src/components/RequestsPage.tsx` |
 | — клиент доски запросов | `frontend/src/api/requests.ts` |
 | — раздел «Аналитика спроса» (PRO): дефицит, что ищут, продажи, unmet | `frontend/src/components/AnalyticsPage.tsx` |

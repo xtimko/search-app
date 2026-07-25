@@ -11,7 +11,12 @@ export async function adminRoutes(app: FastifyInstance) {
     }
   })
 
+  // Нормализация имени для детектора клонов: регистр, пробелы, только буквы/цифры.
+  const normName = (s: string) => s.toLowerCase().replace(/[^a-zа-яё0-9]/gi, '')
+
   // GET /api/admin/sellers — все продавцы (vkId строкой из-за BigInt).
+  // Слой 3 (антифейк): помечаем НЕпроверенного продавца, чьё имя совпадает с
+  // именем уже проверенного — вероятный клон, поднимаем в начало списка.
   app.get('/api/admin/sellers', async () => {
     const sellers = await prisma.seller.findMany({
       orderBy: { createdAt: 'desc' },
@@ -28,7 +33,24 @@ export async function adminRoutes(app: FastifyInstance) {
         _count: { select: { listings: true } },
       },
     })
-    return sellers.map((s) => ({ ...s, vkId: s.vkId.toString() }))
+
+    // Карта нормализованное_имя → отображаемое имя проверенного продавца.
+    const verifiedNames = new Map<string, string>()
+    for (const s of sellers) {
+      if (!s.verified) continue
+      const key = normName(s.vkName || s.nick)
+      if (key) verifiedNames.set(key, s.vkName || s.nick)
+    }
+
+    const rows = sellers.map((s) => {
+      const key = normName(s.vkName || s.nick)
+      // клон = НЕ проверен сам, но имя совпадает с проверенным
+      const similarToVerified = !s.verified && key ? verifiedNames.get(key) ?? null : null
+      return { ...s, vkId: s.vkId.toString(), similarToVerified }
+    })
+    // Подозрительные — в начало (админ увидит сразу).
+    rows.sort((a, b) => Number(!!b.similarToVerified) - Number(!!a.similarToVerified))
+    return rows
   })
 
   // PATCH /api/admin/sellers/:id — сменить статус модерации и/или отметку

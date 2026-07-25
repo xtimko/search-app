@@ -101,7 +101,12 @@ export function AdminPage() {
         {sellers.map((s) => {
           const st = STATUS[s.status]
           return (
-            <div key={s.id} className="card">
+            <div key={s.id} className="card" style={s.similarToVerified ? { borderColor: 'var(--danger)' } : undefined}>
+              {s.similarToVerified && (
+                <div className="text-danger" style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 6 }}>
+                  ⚠ Похож на проверенного «{s.similarToVerified}» — возможный клон, сверь страницу ВК перед одобрением
+                </div>
+              )}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, flexWrap: 'wrap' }}>
                 {s.vkName || s.nick}
                 {s.verified && <VerifiedBadge size={15} />}
