@@ -3,12 +3,13 @@ import crypto from 'node:crypto'
 import { prisma } from '../db'
 import { createSession, verifySession, SESSION_COOKIE } from '../session'
 
-// VK ID OAuth 2.1 (PKCE): /login → id.vk.com → /callback → сессия в httpOnly-cookie.
-// Настройка в кабинете VK ID: redirect URL = https://<домен>/api/auth/vk/callback.
-
-const VKID_AUTH = 'https://id.vk.com/authorize'
-const VKID_TOKEN = 'https://id.vk.com/oauth2/auth'
-const VKID_USERINFO = 'https://id.vk.com/oauth2/user_info'
+// VK ID OAuth 2.1 (PKCE): /login → id.vk.ru → /callback → сессия в httpOnly-cookie.
+// Серверный (confidential) флоу: обмен кода делает бэкенд, VK-токены в браузер
+// не попадают. Эндпоинты и параметры — по актуальной доке id.vk.ru.
+// Настройка в кабинете VK ID: доверенный redirect URL = https://<домен>/api/auth/vk/callback.
+const VKID_AUTH = 'https://id.vk.ru/authorize'
+const VKID_TOKEN = 'https://id.vk.ru/oauth2/auth'
+const VKID_USERINFO = 'https://id.vk.ru/oauth2/user_info'
 const PKCE_COOKIE = 'sa_pkce'
 
 function b64url(buf: Buffer): string {
@@ -16,6 +17,16 @@ function b64url(buf: Buffer): string {
 }
 
 const isProd = process.env.NODE_ENV === 'production'
+
+// service_token («Сервисный ключ доступа» из кабинета) — для конфиденциальных
+// приложений при обмене кода. VK_APP_SECRET оставлен как back-compat алиас.
+const serviceToken = process.env.VK_SERVICE_TOKEN || process.env.VK_APP_SECRET || ''
+
+// redirect_uri ДОЛЖЕН точно совпадать с зарегистрированным в кабинете VK ID.
+// Явный VK_REDIRECT_URI надёжнее вывода из заголовков (за прокси); дефолт — для dev.
+function redirectUri(req: { protocol: string; host: string }): string {
+  return process.env.VK_REDIRECT_URI || `${req.protocol}://${req.host}/api/auth/vk/callback`
+}
 
 const sellerSelect = {
   id: true,
@@ -35,10 +46,10 @@ export async function authRoutes(app: FastifyInstance) {
     const clientId = process.env.VK_APP_ID
     if (!clientId) return reply.code(500).send({ error: 'VK_APP_ID не задан' })
 
+    // PKCE: verifier 43 симв. (43–128 по RFC 7636), state ≥32 симв. (требование VK ID).
     const verifier = b64url(crypto.randomBytes(32))
     const challenge = b64url(crypto.createHash('sha256').update(verifier).digest())
-    const state = b64url(crypto.randomBytes(16))
-    const redirectUri = `${req.protocol}://${req.host}/api/auth/vk/callback`
+    const state = b64url(crypto.randomBytes(32))
 
     reply.setCookie(PKCE_COOKIE, `${verifier}.${state}`, {
       path: '/api/auth',
@@ -51,10 +62,10 @@ export async function authRoutes(app: FastifyInstance) {
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: clientId,
-      redirect_uri: redirectUri,
+      redirect_uri: redirectUri(req),
       state,
       code_challenge: challenge,
-      code_challenge_method: 's256',
+      code_challenge_method: 'S256', // регистр важен (RFC 7636 / VK ID)
     })
     return reply.redirect(`${VKID_AUTH}?${params.toString()}`)
   })
@@ -70,19 +81,20 @@ export async function authRoutes(app: FastifyInstance) {
 
       if (!clientId || !code || !state || !pkce) return reply.redirect('/?auth=failed')
       const [verifier, savedState] = pkce.split('.')
-      if (!verifier || savedState !== state) return reply.redirect('/?auth=failed')
+      if (!verifier || savedState !== state) return reply.redirect('/?auth=failed') // CSRF-защита
 
-      const redirectUri = `${req.protocol}://${req.host}/api/auth/vk/callback`
+      // Обмен кода на токены. VK ID использует PKCE (code_verifier), а не
+      // client_secret; конфиденциальному приложению нужен service_token.
       const body = new URLSearchParams({
         grant_type: 'authorization_code',
         code,
         code_verifier: verifier,
         client_id: clientId,
-        device_id: device_id ?? '',
-        redirect_uri: redirectUri,
+        device_id: device_id ?? '', // VK ID возвращает его в callback и требует при обмене
+        redirect_uri: redirectUri(req),
         state,
       })
-      if (process.env.VK_APP_SECRET) body.set('client_secret', process.env.VK_APP_SECRET)
+      if (serviceToken) body.set('service_token', serviceToken)
 
       try {
         const tokenRes = await fetch(VKID_TOKEN, {
@@ -90,8 +102,11 @@ export async function authRoutes(app: FastifyInstance) {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body,
         })
-        const token = (await tokenRes.json()) as { access_token?: string; user_id?: number; error?: string }
-        if (!token.access_token || !token.user_id) {
+        // Ответ содержит access_token, refresh_token, id_token, expires_in, user_id…
+        // Нам нужен только профиль при входе — refresh/id-токены не храним
+        // (сессия самодостаточна; id-token несёт лишь маскированные данные).
+        const token = (await tokenRes.json()) as { access_token?: string; user_id?: string | number; error?: string; error_description?: string }
+        if (!token.access_token || token.user_id == null) {
           req.log.error({ token }, 'vk id: обмен кода не удался')
           return reply.redirect('/?auth=failed')
         }

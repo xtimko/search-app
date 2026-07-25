@@ -20,7 +20,9 @@ import { importRoutes } from './routes/import'
 import { sellerRoutes } from './routes/seller'
 import { adminRoutes } from './routes/admin'
 
-const app = Fastify({ logger: true })
+// trustProxy: за nginx читаем X-Forwarded-Proto/Host — иначе req.protocol='http'
+// и redirect_uri уйдёт в VK ID как http://… (не совпадёт с зарегистрированным https).
+const app = Fastify({ logger: true, trustProxy: true })
 
 // Тестовый эндпоинт — проверка, что бэкенд жив и связан с фронтом.
 app.get('/health', async () => {

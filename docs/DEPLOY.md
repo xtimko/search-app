@@ -75,22 +75,29 @@ sudo certbot --nginx -d stockpoisk.твойдомен.ru           # выпус�
 НЕ виджет-SDK OneTap: секрет остаётся на сервере, сессия — наша httpOnly-cookie.
 Готовый SDK-сниппет из кабинета VK (OneTap, `redirectUrl` в корень) **не используем.**
 
-1. Кабинет id.vk.com / dev.vk.com → приложение **54693313**:
+Эндпоинты VK ID — `id.vk.ru` (актуальные, OAuth 2.1). Наш код: `S256`, `state`≥32,
+обмен через `service_token` (не `client_secret`), `trustProxy` включён (redirect_uri
+уходит как https за nginx).
+
+1. Кабинет id.vk.ru → приложение **54693313**:
    - **Базовый домен**: `search-app.ru`
    - **Доверенный redirect URL**: `https://search-app.ru/api/auth/vk/callback`
-     (именно этот путь, не корень домена — корень был для SDK-виджета).
+     (именно этот путь, не корень домена — корень был для SDK-виджета, его можно удалить).
    - Доступы: базовые (имя, фамилия, фото) — этого хватает.
 2. В `/opt/stockpoisk/.env`:
    - `VK_APP_ID=54693313`
+   - `VK_REDIRECT_URI=https://search-app.ru/api/auth/vk/callback` (точное совпадение с кабинетом)
    - `SESSION_SECRET=` → `openssl rand -hex 32`
-   - `VK_APP_SECRET` — СНАЧАЛА оставить пустым (VK ID 2.1 = PKCE public client).
-     Если в логах обмен кода падает с ошибкой про `client_secret` — вписать
-     «Защищённый ключ» из кабинета и пересобрать.
+   - `VK_SERVICE_TOKEN=` — «Сервисный ключ доступа» из кабинета. Для конфиденциального
+     приложения обязателен; если приложение публичное (хватает PKCE) — оставить пустым.
+     Если в логах обмен кода падает с ошибкой про client/service_token — вписать и пересобрать.
+     (`VK_APP_SECRET` поддерживается как старый алиас — можно не трогать.)
    - `ALLOW_TEST_LOGIN` — оставить пустым (тестовый вход выключен).
 3. Пересобрать: `sudo docker compose up -d --build` (env берётся из `.env` через compose).
 4. Проверка: «Войти» в шапке → окно VK ID → возврат на сайт с именем и аватаром.
-   Если вернулось `…/?auth=failed` — смотри причину: `sudo docker compose logs -f app | grep "vk id"`.
+   Если вернулось `…/?auth=failed` — причина в логах: `sudo docker compose logs -f app | grep "vk id"`.
 
+> ⚠️ `VK_SERVICE_TOKEN`, `SESSION_SECRET` — секреты: только в серверном `.env`, не в git/чат/фронт.
 > В проде разделы «Мой сток», «Профиль», «Чаты» без входа недоступны (401 + гейт входа).
 > Локально (не production) без входа работает dev-продавец; тестовый вход по имени —
 > только в dev-сборке фронта и при `ALLOW_TEST_LOGIN=1` на бэке (аварийный доступ).
