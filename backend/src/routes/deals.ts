@@ -28,6 +28,7 @@ const dealInclude = {
   buyer: { select: { id: true, nick: true, vkName: true, photo: true } },
   seller: { select: { id: true, nick: true, vkName: true, photo: true } },
   review: { select: { id: true, rating: true } },
+  guarantorRef: { select: { id: true, name: true, contact: true, note: true } },
 } as const
 
 function fmtPrice(p: number): string {
@@ -192,30 +193,53 @@ export async function dealRoutes(app: FastifyInstance) {
     return updated
   })
 
-  // POST /api/deals/:id/guarantor { name } — назначить/сменить гаранта (пока сделка открыта).
+  // POST /api/deals/:id/guarantor — подключить/сменить/убрать гаранта (сделка открыта):
+  //   { guarantorId } — выбрать проверенного из списка площадки;
+  //   { name }        — указать «своего» гаранта строкой (имя/контакт);
+  //   {} или null     — убрать гаранта.
   app.post<{ Params: { id: string } }>('/api/deals/:id/guarantor', async (req, reply) => {
     const me = await requireAuth(req, reply)
     if (!me) return
     const id = Number(req.params.id)
-    const name = String((req.body as { name?: string })?.name ?? '').trim().slice(0, 120)
-    if (!name) return reply.code(400).send({ error: 'укажи имя/контакт гаранта' })
+    const body = (req.body ?? {}) as { guarantorId?: number | null; name?: string }
     const deal = await prisma.deal.findUnique({ where: { id } })
     if (!deal || (deal.buyerId !== me && deal.sellerId !== me)) return reply.code(404).send({ error: 'сделка не найдена' })
     if (deal.status !== 'open') return reply.code(400).send({ error: 'сделка уже закрыта' })
 
+    let data: { guarantor: string | null; guarantorId: number | null }
+    let sysText: string
+
+    if (body.guarantorId) {
+      const g = await prisma.guarantor.findUnique({ where: { id: Number(body.guarantorId) } })
+      if (!g || !g.active) return reply.code(400).send({ error: 'гарант не найден' })
+      data = { guarantorId: g.id, guarantor: null }
+      sysText = `Гарант сделки: ${g.name} (${g.contact}) — проверен площадкой. Оплата через гаранта, перевод продавцу после подтверждения получения.`
+    } else {
+      const name = String(body.name ?? '').trim().slice(0, 120)
+      if (name) {
+        data = { guarantor: name, guarantorId: null }
+        sysText = `Гарант сделки (свой): ${name}. Оплата через гаранта, перевод продавцу после подтверждения получения.`
+      } else {
+        data = { guarantor: null, guarantorId: null }
+        sysText = 'Гарант сделки убран.'
+      }
+    }
+
     const [updated] = await prisma.$transaction([
-      prisma.deal.update({ where: { id }, data: { guarantor: name }, include: dealInclude }),
-      prisma.message.create({
-        data: {
-          conversationId: deal.conversationId,
-          senderId: me,
-          kind: 'system',
-          text: `Гарант сделки: ${name}. Оплата — через гаранта, перевод продавцу после подтверждения получения.`,
-        },
-      }),
+      prisma.deal.update({ where: { id }, data, include: dealInclude }),
+      prisma.message.create({ data: { conversationId: deal.conversationId, senderId: me, kind: 'system', text: sysText } }),
       prisma.conversation.update({ where: { id: deal.conversationId }, data: { updatedAt: new Date() } }),
     ])
     return updated
+  })
+
+  // GET /api/guarantors — активные проверенные гаранты (для выбора в сделке).
+  app.get('/api/guarantors', async () => {
+    return prisma.guarantor.findMany({
+      where: { active: true },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, contact: true, note: true },
+    })
   })
 
   // POST /api/deals/:id/review { rating, text? } — отзыв покупателя по завершённой сделке.

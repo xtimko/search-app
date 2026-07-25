@@ -208,4 +208,57 @@ export async function adminRoutes(app: FastifyInstance) {
     await prisma.model.delete({ where: { id } })
     return { ok: true }
   })
+
+  // --- Проверенные гаранты (для безопасной сделки) ---
+
+  // GET /api/admin/guarantors — все (включая скрытые).
+  app.get('/api/admin/guarantors', async () => {
+    return prisma.guarantor.findMany({
+      orderBy: [{ active: 'desc' }, { name: 'asc' }],
+      select: { id: true, name: true, contact: true, note: true, active: true, _count: { select: { deals: true } } },
+    })
+  })
+
+  // POST /api/admin/guarantors { name, contact, note? }
+  app.post('/api/admin/guarantors', async (req, reply) => {
+    const b = (req.body ?? {}) as { name?: string; contact?: string; note?: string }
+    const name = (b.name ?? '').trim().slice(0, 120)
+    const contact = (b.contact ?? '').trim().slice(0, 200)
+    if (name.length < 2 || !contact) return reply.code(400).send({ error: 'нужны имя и контакт гаранта' })
+    const g = await prisma.guarantor.create({ data: { name, contact, note: (b.note ?? '').trim().slice(0, 200) || null } })
+    return reply.code(201).send(g)
+  })
+
+  // PATCH /api/admin/guarantors/:id — правка/скрытие (active).
+  app.patch<{ Params: { id: string } }>('/api/admin/guarantors/:id', async (req, reply) => {
+    const id = Number(req.params.id)
+    const b = (req.body ?? {}) as { name?: string; contact?: string; note?: string; active?: boolean }
+    const data: { name?: string; contact?: string; note?: string | null; active?: boolean } = {}
+    if (b.name !== undefined) {
+      const n = b.name.trim().slice(0, 120)
+      if (n.length < 2) return reply.code(400).send({ error: 'имя мин. 2 символа' })
+      data.name = n
+    }
+    if (b.contact !== undefined) {
+      const c = b.contact.trim().slice(0, 200)
+      if (!c) return reply.code(400).send({ error: 'контакт обязателен' })
+      data.contact = c
+    }
+    if (b.note !== undefined) data.note = b.note.trim().slice(0, 200) || null
+    if (typeof b.active === 'boolean') data.active = b.active
+    if (Object.keys(data).length === 0) return reply.code(400).send({ error: 'нечего менять' })
+    return prisma.guarantor.update({ where: { id }, data })
+  })
+
+  // DELETE /api/admin/guarantors/:id — удалить, если не использовался; иначе скрыть.
+  app.delete<{ Params: { id: string } }>('/api/admin/guarantors/:id', async (req, reply) => {
+    const id = Number(req.params.id)
+    const used = await prisma.deal.count({ where: { guarantorId: id } })
+    if (used > 0) {
+      await prisma.guarantor.update({ where: { id }, data: { active: false } })
+      return { ok: true, hidden: true } // историю сделок не рвём — просто скрыли
+    }
+    await prisma.guarantor.delete({ where: { id } })
+    return { ok: true }
+  })
 }

@@ -121,3 +121,35 @@ export async function deleteModel(id: number) {
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as { error?: string }).error || `HTTP ${res.status}`) }
   return res.json()
 }
+
+// --- Проверенные гаранты ---
+export interface AdminGuarantor {
+  id: number
+  name: string
+  contact: string
+  note: string | null
+  active: boolean
+  _count: { deals: number }
+}
+
+export async function fetchAdminGuarantors(): Promise<AdminGuarantor[]> {
+  const res = await fetch('/api/admin/guarantors', { headers: headers() })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export function addGuarantor(payload: { name: string; contact: string; note?: string }) {
+  return postAdmin('/api/admin/guarantors', payload)
+}
+
+export async function updateGuarantor(id: number, patch: Partial<{ name: string; contact: string; note: string; active: boolean }>) {
+  const res = await fetch(`/api/admin/guarantors/${id}`, { method: 'PATCH', headers: headers(), body: JSON.stringify(patch) })
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as { error?: string }).error || `HTTP ${res.status}`) }
+  return res.json()
+}
+
+export async function deleteGuarantor(id: number) {
+  const res = await fetch(`/api/admin/guarantors/${id}`, { method: 'DELETE', headers: headers() })
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as { error?: string }).error || `HTTP ${res.status}`) }
+  return res.json()
+}

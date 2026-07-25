@@ -11,10 +11,12 @@ import {
   cancelDeal,
   reviewDeal,
   setDealGuarantor,
+  fetchGuarantors,
   type Conversation,
   type ChatMessage,
   type ChatPeer,
   type DealFull,
+  type Guarantor,
 } from '../api/chats'
 import { VerifiedBadge } from './VerifiedBadge'
 
@@ -30,6 +32,16 @@ function useIsDesktop(): boolean {
 
 function peerOf(c: Conversation, meId: number): ChatPeer {
   return c.buyerId === meId ? c.seller : c.buyer
+}
+
+// Контакт гаранта → кликабельная ссылка (ВК/Telegram/телефон/URL).
+function guarLink(contact: string): string {
+  const c = contact.trim()
+  if (/^https?:\/\//i.test(c)) return c
+  if (c.startsWith('@')) return `https://t.me/${c.slice(1)}`
+  if (/^\+?\d[\d\s()-]{6,}$/.test(c)) return `tel:${c.replace(/[\s()-]/g, '')}`
+  if (/(vk\.com|t\.me)\//i.test(c)) return `https://${c.replace(/^\/+/, '')}`
+  return c
 }
 
 function sizeOf(l: { sizeUs: string | null; sizeEu: string | null; size: string | null }): string {
@@ -139,7 +151,7 @@ function DealsView({ meId, onOpenChat }: { meId: number; onOpenChat: (chatId: nu
         <div className="text-2" style={{ fontSize: 13 }}>
           {iAmBuyer ? 'покупаю у' : 'продаю'} {peer.vkName || peer.nick} ·{' '}
           <b className="text-accent">{d.price.toLocaleString('ru-RU')} ₽</b> · {fmtTime(d.createdAt)}
-          {d.guarantor && <span className="text-3"> · гарант: {d.guarantor}</span>}
+          {d.guarantorRef ? <span className="text-3"> · гарант: {d.guarantorRef.name} ✓</span> : d.guarantor ? <span className="text-3"> · гарант: {d.guarantor}</span> : null}
         </div>
         {d.status === 'completed' && iAmBuyer && (
           d.review ? (
@@ -229,8 +241,9 @@ export function ChatsPage({ meId, initialChatId }: { meId: number; initialChatId
   const [offerMode, setOfferMode] = useState(false)
   const [offerPrice, setOfferPrice] = useState('')
   const [sending, setSending] = useState(false)
-  const [guarEdit, setGuarEdit] = useState(false)
-  const [guarName, setGuarName] = useState('')
+  const [guarPick, setGuarPick] = useState(false) // открыт выбор гаранта
+  const [guarName, setGuarName] = useState('') // «свой» гарант
+  const [guarantors, setGuarantors] = useState<Guarantor[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
   const stickBottom = useRef(true)
 
@@ -275,6 +288,11 @@ export function ChatsPage({ meId, initialChatId }: { meId: number; initialChatId
 
   const active = useMemo(() => convs.find((c) => c.id === activeId) ?? null, [convs, activeId])
   const openDeal = active?.deals?.[0] ?? null
+
+  // Список проверенных гарантов — один раз (для выбора в сделке).
+  useEffect(() => {
+    fetchGuarantors().then(setGuarantors).catch(() => {})
+  }, [])
 
   async function submit() {
     if (activeId == null || sending) return
@@ -409,65 +427,96 @@ export function ChatsPage({ meId, initialChatId }: { meId: number; initialChatId
             </div>
           </div>
         </div>
-        {openDeal && (
-          <div
-            style={{
-              marginTop: 8,
-              padding: '8px 10px',
-              borderRadius: 10,
-              border: '1px solid var(--accent)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              flexWrap: 'wrap',
-            }}
-          >
-            <span style={{ fontSize: 13 }}>
-              Сделка открыта · <b className="text-accent">{openDeal.price.toLocaleString('ru-RU')} ₽</b>
-              <span className="text-3"> · покупатель {openDeal.buyerConfirmed ? '✓' : '—'} · продавец {openDeal.sellerConfirmed ? '✓' : '—'}</span>
-            </span>
-            {openDeal.guarantor && (
-              <span className="text-2" style={{ fontSize: 12, width: '100%' }}>
-                Гарант: <b>{openDeal.guarantor}</b> — оплата через гаранта, перевод продавцу после подтверждения получения
+        {openDeal && (() => {
+          const iConfirmed = (openDeal.buyerId === meId && openDeal.buyerConfirmed) || (openDeal.sellerId === meId && openDeal.sellerConfirmed)
+          const hasGuar = !!(openDeal.guarantorRef || openDeal.guarantor)
+          // Шаги безопасной сделки — где мы сейчас.
+          const step = iConfirmed ? 3 : hasGuar ? 2 : 1
+          const setGuar = (payload: { guarantorId?: number | null; name?: string }) =>
+            dealAction(async () => { await setDealGuarantor(openDeal.id, payload); setGuarPick(false); setGuarName('') })
+          return (
+          <div style={{ marginTop: 8, padding: '10px 12px', borderRadius: 12, border: '1px solid var(--accent)', display: 'grid', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 13 }}>
+                Сделка открыта · <b className="text-accent">{openDeal.price.toLocaleString('ru-RU')} ₽</b>
+                <span className="text-3"> · покупатель {openDeal.buyerConfirmed ? '✓' : '—'} · продавец {openDeal.sellerConfirmed ? '✓' : '—'}</span>
               </span>
-            )}
-            {guarEdit && (
-              <span style={{ display: 'flex', gap: 6, width: '100%' }}>
-                <input
-                  className="input"
-                  style={{ flex: 1, padding: '6px 10px', fontSize: 13 }}
-                  value={guarName}
-                  onChange={(e) => setGuarName(e.target.value)}
-                  placeholder="имя / ссылка на гаранта"
-                  autoFocus
-                />
-                <button
-                  className="btn btn-primary btn-sm"
-                  disabled={!guarName.trim()}
-                  onClick={() => dealAction(async () => { await setDealGuarantor(openDeal.id, guarName.trim()); setGuarEdit(false); setGuarName('') })}
-                >
-                  Сохранить
-                </button>
-                <button className="btn btn-ghost btn-sm" onClick={() => setGuarEdit(false)}>Отмена</button>
+              <span style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
+                {!iConfirmed && (
+                  <button className="btn btn-primary btn-sm" onClick={() => dealAction(() => confirmDeal(openDeal.id))}>
+                    Подтвердить получение
+                  </button>
+                )}
+                <button className="btn btn-danger btn-sm" onClick={() => dealAction(() => cancelDeal(openDeal.id))}>Отменить</button>
               </span>
+            </div>
+
+            {/* Шаги безопасной сделки */}
+            <div className="text-3" style={{ fontSize: 11 }}>
+              Безопасная сделка: <b className={step >= 1 ? 'text-2' : ''}>1. цена ✓</b> ·{' '}
+              <b className={step >= 2 ? 'text-2' : ''}>2. гарант</b> ·{' '}
+              <b className={step >= 2 ? 'text-2' : ''}>3. оплата гаранту</b> ·{' '}
+              <b className={step >= 3 ? 'text-2' : ''}>4. оба подтверждают</b>
+            </div>
+
+            {/* Текущий гарант */}
+            {openDeal.guarantorRef ? (
+              <div className="text-2" style={{ fontSize: 12.5, background: 'var(--bg-elev)', borderRadius: 8, padding: '8px 10px' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <VerifiedBadge size={14} /> Гарант: <b>{openDeal.guarantorRef.name}</b> · проверен площадкой
+                </span>
+                <div style={{ marginTop: 3 }}>
+                  Связь: <a href={guarLink(openDeal.guarantorRef.contact)} target="_blank" rel="noopener noreferrer">{openDeal.guarantorRef.contact}</a>
+                  {openDeal.guarantorRef.note && <span className="text-3"> · {openDeal.guarantorRef.note}</span>}
+                </div>
+                <div className="text-3" style={{ marginTop: 3 }}>Оплата гаранту → он переводит продавцу после подтверждения получения. <button className="btn btn-ghost btn-sm" style={{ padding: '0 4px', minHeight: 0 }} onClick={() => setGuar({})}>убрать</button></div>
+              </div>
+            ) : openDeal.guarantor ? (
+              <div className="text-2" style={{ fontSize: 12.5, background: 'var(--bg-elev)', borderRadius: 8, padding: '8px 10px' }}>
+                Гарант (свой): <b>{openDeal.guarantor}</b> <span style={{ color: 'var(--warn)' }}>· не проверен площадкой</span>
+                <button className="btn btn-ghost btn-sm" style={{ padding: '0 4px', minHeight: 0, marginLeft: 6 }} onClick={() => setGuar({})}>убрать</button>
+              </div>
+            ) : guarPick ? (
+              <div style={{ background: 'var(--bg-elev)', borderRadius: 8, padding: '10px', display: 'grid', gap: 8 }}>
+                <div className="text-3" style={{ fontSize: 12 }}>Гарант — посредник: принимает оплату и переводит продавцу после того, как покупатель подтвердит получение. Защищает обе стороны.</div>
+                {guarantors.length > 0 ? (
+                  <div style={{ display: 'grid', gap: 6 }}>
+                    <div className="text-3" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Проверенные площадкой</div>
+                    {guarantors.map((g) => (
+                      <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ fontWeight: 600 }}>{g.name}</span>
+                          <span className="text-3"> · {g.contact}{g.note ? ` · ${g.note}` : ''}</span>
+                        </div>
+                        <button className="btn btn-primary btn-sm" onClick={() => setGuar({ guarantorId: g.id })}>Выбрать</button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-3" style={{ fontSize: 12 }}>Проверенных гарантов пока нет в списке — можно указать своего по договорённости.</div>
+                )}
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input
+                    className="input"
+                    style={{ flex: 1, padding: '6px 10px', fontSize: 13 }}
+                    value={guarName}
+                    onChange={(e) => setGuarName(e.target.value)}
+                    placeholder="свой гарант: имя / ссылка"
+                  />
+                  <button className="btn btn-outline btn-sm" disabled={!guarName.trim()} onClick={() => setGuar({ name: guarName.trim() })}>Указать</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setGuarPick(false)}>Закрыть</button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <button className="btn btn-outline btn-sm" title="посредник: принимает оплату и переводит продавцу после получения товара" onClick={() => setGuarPick(true)}>
+                  🛡 Провести через гаранта
+                </button>
+              </div>
             )}
-            <span style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
-              {!openDeal.guarantor && !guarEdit && (
-                <button className="btn btn-outline btn-sm" title="посредник: принимает оплату и переводит продавцу после получения товара" onClick={() => setGuarEdit(true)}>
-                  + Гарант
-                </button>
-              )}
-              {!((openDeal.buyerId === meId && openDeal.buyerConfirmed) || (openDeal.sellerId === meId && openDeal.sellerConfirmed)) && (
-                <button className="btn btn-primary btn-sm" onClick={() => dealAction(() => confirmDeal(openDeal.id))}>
-                  Подтвердить
-                </button>
-              )}
-              <button className="btn btn-danger btn-sm" onClick={() => dealAction(() => cancelDeal(openDeal.id))}>
-                Отменить
-              </button>
-            </span>
           </div>
-        )}
+          )
+        })()}
       </div>
 
       <div

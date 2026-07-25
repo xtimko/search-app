@@ -144,6 +144,19 @@ enum OfferStatus {
   superseded
 }
 
+// Проверенный площадкой гарант-посредник: принимает оплату и переводит
+// продавцу после подтверждения получения. Ведёт администратор — участники
+// сделки выбирают из этого списка (безопаснее, чем вписывать имя вручную).
+model Guarantor {
+  id        Int      @id @default(autoincrement())
+  name      String
+  contact   String // ссылка ВК/Telegram или телефон
+  note      String? // условия/комиссия (напр. «2%, только Москва»)
+  active    Boolean  @default(true) // скрыть из выбора, не удаляя историю
+  deals     Deal[]
+  createdAt DateTime @default(now())
+}
+
 // Сделка: принятый оффер по конкретной позиции. Открыта → позиция в резерве;
 // оба подтвердили → completed + «продано»; отмена → резерв снят.
 model Deal {
@@ -160,7 +173,9 @@ model Deal {
   status          DealStatus   @default(open)
   buyerConfirmed  Boolean      @default(false)
   sellerConfirmed Boolean      @default(false)
-  guarantor       String? // опциональный гарант-посредник (имя/контакт)
+  guarantor       String? // «свой» гарант вне списка (имя/контакт строкой)
+  guarantorId     Int? // выбранный из проверенного списка площадки
+  guarantorRef    Guarantor?   @relation(fields: [guarantorId], references: [id])
   review          Review?
   createdAt       DateTime     @default(now())
   closedAt        DateTime?

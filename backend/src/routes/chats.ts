@@ -24,7 +24,7 @@ const convInclude = (me: number) =>
     buyer: { select: peerSelect },
     seller: { select: peerSelect },
     messages: { orderBy: { createdAt: 'desc' as const }, take: 1, select: { text: true, senderId: true, createdAt: true } },
-    deals: { where: { status: 'open' as const }, take: 1 },
+    deals: { where: { status: 'open' as const }, take: 1, include: { guarantorRef: { select: { id: true, name: true, contact: true, note: true } } } },
     _count: { select: { messages: { where: { readAt: null, NOT: { senderId: me } } } } },
   }) as const
 

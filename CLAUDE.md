@@ -94,7 +94,7 @@
 | — сервер: `/health`, регистрация роутов, раздача SPA (прод), закрытие БД | `backend/src/index.ts` |
 | — VK ID OAuth: login/callback/me/logout | `backend/src/routes/auth.ts` |
 | — чаты: диалоги по товару, сообщения, unread (`/api/chats*`) | `backend/src/routes/chats.ts` |
-| — сделки: офферы в чате, accept/confirm/cancel, резерв, отзыв (`/api/deals*`) | `backend/src/routes/deals.ts` |
+| — сделки: офферы в чате, accept/confirm/cancel, резерв, отзыв, гарант (проверенный/свой/убрать), `GET /api/guarantors` (`/api/deals*`) | `backend/src/routes/deals.ts` |
 | — публичный профиль продавца: метрики/отзывы/товары (`/api/sellers/:id/profile`) | `backend/src/routes/sellers.ts` |
 | — доска запросов «Ищу»: матчинг, отклик=чат+оффер (`/api/requests*`) | `backend/src/routes/requests.ts` |
 | — аналитика спроса (PRO): `/api/analytics/demand` (спрос/дефицит/продажи/unmet) | `backend/src/routes/analytics.ts` |
@@ -107,8 +107,8 @@
 | — поиск покупателя: `GET /api/search` (парсер строки + нечёткий поиск pg_trgm + ранжирование + фильтры; документ модели включает расцветки живых офферов — коллабы ищутся с обеих сторон) | `backend/src/routes/search.ts` |
 | — массовый импорт: `POST /api/import/preview`/`commit` | `backend/src/routes/import.ts` |
 | — профиль продавца: `GET`/`PATCH /api/seller/me` | `backend/src/routes/seller.ts` |
-| — админка: модерация + справочник + карточки моделей (`GET/POST/PATCH/DELETE /api/admin/models`) | `backend/src/routes/admin.ts` |
-| **Схема БД** (PostgreSQL): Category(дерево), Brand, Model(+sku/status/imageUrl+паспорт: colorway/retailPrice/releaseYear/description), Listing, Seller(+verified — «официальный», защита от клонов), Favorite(«Слежу»), Conversation, Message, Deal, Review, Request(+Response), SearchLog | `prisma/schema.prisma` |
+| — админка: модерация (продавцы+verified+детектор клонов) + гаранты (`/api/admin/guarantors`) + справочник + карточки моделей | `backend/src/routes/admin.ts` |
+| **Схема БД** (PostgreSQL): Category(дерево), Brand, Model(+sku/status/imageUrl+паспорт: colorway/retailPrice/releaseYear/description), Listing, Seller(+verified — «официальный», защита от клонов), Favorite(«Слежу»), Conversation, Message, Deal(+guarantorId), Guarantor(проверенные гаранты), Review, Request(+Response), SearchLog | `prisma/schema.prisma` |
 | История миграций (init + catalog_revision) | `prisma/migrations/` |
 | Seed справочника (категории + бренды + модели, с алиасами) | `prisma/seed.ts` |
 | Анализ реального чата запросов (спрос, форматы) | `docs/research/vk_chat_analysis.md` |

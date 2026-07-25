@@ -34,9 +34,18 @@ export interface Deal {
   buyerConfirmed: boolean
   sellerConfirmed: boolean
   review?: { id: number; rating: number } | null
-  guarantor?: string | null
+  guarantor?: string | null // «свой» гарант строкой (вне списка площадки)
+  guarantorId?: number | null
+  guarantorRef?: { id: number; name: string; contact: string; note: string | null } | null // проверенный
   createdAt: string
   closedAt: string | null
+}
+
+export interface Guarantor {
+  id: number
+  name: string
+  contact: string
+  note: string | null
 }
 
 export interface Conversation {
@@ -142,12 +151,19 @@ export function cancelDeal(id: number): Promise<DealFull> {
   return req<DealFull>(`/api/deals/${id}/cancel`, { method: 'POST' })
 }
 
-export function setDealGuarantor(id: number, name: string): Promise<DealFull> {
+// Подключить/сменить/убрать гаранта: {guarantorId} — из списка, {name} — свой,
+// {} — убрать.
+export function setDealGuarantor(id: number, payload: { guarantorId?: number | null; name?: string }): Promise<DealFull> {
   return req<DealFull>(`/api/deals/${id}/guarantor`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(payload),
   })
+}
+
+// Активные проверенные гаранты площадки (для выбора в сделке).
+export function fetchGuarantors(): Promise<Guarantor[]> {
+  return req<Guarantor[]>('/api/guarantors')
 }
 
 export function reviewDeal(id: number, rating: number, text: string): Promise<{ id: number }> {
