@@ -43,6 +43,7 @@ export function ProfilePage({ auth, onLogout, onOpenChat, onOpenAnalytics }: { a
   const [deals, setDeals] = useState<DealFull[]>([])
   const [favs, setFavs] = useState<CatalogItem[]>([])
   const [logins, setLogins] = useState<LoginEvent[]>([])
+  const [tab, setTab] = useState<'profile' | 'settings'>('profile')
   const favVersion = useFavoritesVersion() // снял сердечко в ряду — список обновится
 
   useEffect(() => {
@@ -77,15 +78,14 @@ export function ProfilePage({ auth, onLogout, onOpenChat, onOpenAnalytics }: { a
             <span title="ваш VK ID (для настройки доступа администратора)"> · ID {auth.vkId}</span>
           </div>
         </div>
-        {!auth.dev && (
-          <button className="btn btn-ghost btn-sm" onClick={onLogout}>
-            Выйти
-          </button>
-        )}
       </div>
 
-      <ProfileForm />
+      <div style={{ display: 'flex', gap: 8, margin: '2px 0 6px' }}>
+        <button className={tab === 'profile' ? 'chip chip-active' : 'chip'} onClick={() => setTab('profile')}>Профиль</button>
+        <button className={tab === 'settings' ? 'chip chip-active' : 'chip'} onClick={() => setTab('settings')}>Настройки</button>
+      </div>
 
+      {tab === 'profile' && (<>
       <div
         className="card"
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, cursor: 'pointer', marginTop: 14 }}
@@ -195,6 +195,10 @@ export function ProfilePage({ auth, onLogout, onOpenChat, onOpenAnalytics }: { a
           </>
         )}
       </div>
+      </>)}
+
+      {tab === 'settings' && (<>
+      <ProfileForm />
 
       <div className="section-title">Недавние входы</div>
       <div className="card">
@@ -215,6 +219,13 @@ export function ProfilePage({ auth, onLogout, onOpenChat, onOpenAnalytics }: { a
           </div>
         )}
       </div>
+
+      {!auth.dev && (
+        <button className="btn btn-outline btn-block" style={{ marginTop: 14 }} onClick={onLogout}>
+          Выйти из аккаунта
+        </button>
+      )}
+      </>)}
     </div>
   )
 }
