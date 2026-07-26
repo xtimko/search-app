@@ -107,7 +107,7 @@
 | — поиск покупателя: `GET /api/search` (парсер строки + нечёткий поиск pg_trgm + ранжирование + фильтры; документ модели включает расцветки живых офферов — коллабы ищутся с обеих сторон) | `backend/src/routes/search.ts` |
 | — массовый импорт: `POST /api/import/preview`/`commit` | `backend/src/routes/import.ts` |
 | — профиль продавца: `GET`/`PATCH /api/seller/me` | `backend/src/routes/seller.ts` |
-| — админка: модерация (продавцы+verified+детектор клонов) + гаранты (`/api/admin/guarantors`) + справочник + карточки моделей | `backend/src/routes/admin.ts` |
+| — админка (доступ по роли: сессия VK ID + `ADMIN_VK_IDS`): модерация (продавцы+verified+детектор клонов) + гаранты + справочник + карточки моделей | `backend/src/routes/admin.ts` |
 | **Схема БД** (PostgreSQL): Category(дерево), Brand, Model(+sku/status/imageUrl+паспорт: colorway/retailPrice/releaseYear/description), Listing, Seller(+verified — «официальный», защита от клонов), Favorite(«Слежу»), Conversation, Message, Deal(+guarantorId), Guarantor(проверенные гаранты), Review, Request(+Response), SearchLog | `prisma/schema.prisma` |
 | История миграций (init + catalog_revision) | `prisma/migrations/` |
 | Seed справочника (категории + бренды + модели, с алиасами) | `prisma/seed.ts` |

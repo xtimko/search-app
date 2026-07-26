@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import crypto from 'node:crypto'
 import { prisma } from '../db'
 import { createSession, verifySession, SESSION_COOKIE } from '../session'
+import { isAdminVkId } from './listings'
 
 // VK ID OAuth 2.1 (PKCE): /login → id.vk.ru → /callback → сессия в httpOnly-cookie.
 // Серверный (confidential) флоу: обмен кода делает бэкенд, VK-токены в браузер
@@ -163,11 +164,11 @@ export async function authRoutes(app: FastifyInstance) {
     const vkId = verifySession(req.cookies[SESSION_COOKIE])
     if (vkId) {
       const seller = await prisma.seller.findUnique({ where: { vkId }, select: sellerSelect })
-      if (seller) return { ...seller, dev: false }
+      if (seller) return { ...seller, vkId: vkId.toString(), isAdmin: isAdminVkId(vkId), dev: false }
     }
     if (!isProd) {
       const dev = await prisma.seller.findUnique({ where: { vkId: 1n }, select: sellerSelect })
-      if (dev) return { ...dev, dev: true }
+      if (dev) return { ...dev, vkId: '1', isAdmin: isAdminVkId(1n), dev: true }
     }
     return reply.code(401).send({ error: 'нужен вход через ВК' })
   })

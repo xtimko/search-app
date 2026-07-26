@@ -1,9 +1,7 @@
-// Клиент админ-панели (бэкенд /api/admin/*). Доступ по заголовку x-admin-token.
-// В dev токен = 'dev'; при деплое заменить на реальный механизм.
-const ADMIN_TOKEN = 'dev'
-
+// Клиент админ-панели (бэкенд /api/admin/*). Доступ — по сессии VK ID (роль
+// ADMIN_VK_IDS), cookie уходит автоматически (same-origin). Общего токена нет.
 function headers(): HeadersInit {
-  return { 'Content-Type': 'application/json', 'x-admin-token': ADMIN_TOKEN }
+  return { 'Content-Type': 'application/json' }
 }
 
 export interface AdminSeller {

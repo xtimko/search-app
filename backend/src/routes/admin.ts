@@ -1,14 +1,15 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '../db'
 import { reattributeSearchLogs } from '../demand'
+import { currentVkId, isAdminVkId } from './listings'
 
 // Админ-панель: модерация продавцов + пополнение справочника.
-// Доступ по заголовку x-admin-token (в dev = 'dev'; в проде задать ADMIN_TOKEN).
+// Доступ — по РОЛИ на сессии VK ID (vkId в ADMIN_VK_IDS), не по общему токену.
 export async function adminRoutes(app: FastifyInstance) {
   app.addHook('onRequest', async (req, reply) => {
-    if (req.headers['x-admin-token'] !== (process.env.ADMIN_TOKEN || 'dev')) {
-      return reply.code(401).send({ error: 'нужен админ-доступ' })
-    }
+    const vkId = currentVkId(req)
+    if (!vkId) return reply.code(401).send({ error: 'нужен вход через ВК' })
+    if (!isAdminVkId(vkId)) return reply.code(403).send({ error: 'нет прав администратора' })
   })
 
   // Нормализация имени для детектора клонов: регистр, пробелы, только буквы/цифры.

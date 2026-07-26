@@ -63,6 +63,7 @@ export function ProfilePage({ auth, onLogout, onOpenChat, onOpenAnalytics }: { a
           </div>
           <div className="text-3" style={{ fontSize: 12 }}>
             аккаунт ВКонтакте · <span className={st.cls} style={{ fontWeight: 600 }}>{st.text}</span>
+            <span title="ваш VK ID (для настройки доступа администратора)"> · ID {auth.vkId}</span>
           </div>
         </div>
         {!auth.dev && (

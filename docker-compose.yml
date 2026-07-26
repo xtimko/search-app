@@ -24,8 +24,10 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://stockpoisk:${DB_PASSWORD}@db:5432/stockpoisk?schema=public
-      ADMIN_TOKEN: ${ADMIN_TOKEN:-dev}
+      ADMIN_VK_IDS: ${ADMIN_VK_IDS:-}
       VK_APP_ID: ${VK_APP_ID:-}
+      VK_REDIRECT_URI: ${VK_REDIRECT_URI:-}
+      VK_SERVICE_TOKEN: ${VK_SERVICE_TOKEN:-}
       VK_APP_SECRET: ${VK_APP_SECRET:-}
       SESSION_SECRET: ${SESSION_SECRET:?нужно задать SESSION_SECRET в .env}
       ALLOW_TEST_LOGIN: ${ALLOW_TEST_LOGIN:-}

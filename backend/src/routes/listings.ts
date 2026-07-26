@@ -26,6 +26,20 @@ function vkIdentity(req: FastifyRequest): { vkId: bigint; nick: string } | null 
   return null
 }
 
+// vkId текущего пользователя из сессии (без записи в БД) — для проверки прав.
+export function currentVkId(req: FastifyRequest): bigint | null {
+  return vkIdentity(req)?.vkId ?? null
+}
+
+// Админ = vkId в списке ADMIN_VK_IDS (env, через запятую). В dev — dev-продавец
+// (vkId 1) тоже админ для локальной отладки. Никаких общих токенов.
+export function isAdminVkId(vkId: bigint): boolean {
+  const ids = (process.env.ADMIN_VK_IDS || '').split(',').map((s) => s.trim()).filter(Boolean)
+  if (ids.includes(vkId.toString())) return true
+  if (process.env.NODE_ENV !== 'production' && vkId === 1n) return true
+  return false
+}
+
 export async function getCurrentSellerId(req: FastifyRequest): Promise<number | null> {
   const identity = vkIdentity(req)
   if (!identity) return null

@@ -12,6 +12,8 @@ export interface AuthUser {
   description: string | null
   status: 'pending' | 'approved' | 'blocked'
   verified: boolean // официальный/подтверждённый (Слой 2)
+  vkId: string // числовой id страницы ВК (для настройки ADMIN_VK_IDS)
+  isAdmin: boolean // доступ к админке (роль по ADMIN_VK_IDS)
   dev: boolean
 }
 

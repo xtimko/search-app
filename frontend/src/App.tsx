@@ -261,7 +261,7 @@ export default function App() {
 
           {isDesktop && (
             <nav style={{ display: 'flex', gap: 2, marginLeft: 'auto' }}>
-              {NAV.map((n) => (
+              {NAV.filter((n) => n.id !== 'admin' || auth?.isAdmin).map((n) => (
                 <button
                   key={n.id}
                   className={tab === n.id ? 'btn btn-sm' : 'btn btn-sm btn-ghost'}
@@ -386,7 +386,7 @@ export default function App() {
             <Route path="/seller" element={<Gate authed={authed} authChecked={authChecked} what="Раздел «Мой сток»"><SellerPage /></Gate>} />
             <Route path="/analytics" element={<Gate authed={authed} authChecked={authChecked} what="Аналитика спроса"><AnalyticsPage /></Gate>} />
             <Route path="/profile" element={<Gate authed={authed} authChecked={authChecked} what="Раздел «Профиль»">{auth && <ProfilePage auth={auth} onLogout={onLogout} onOpenChat={goChat} onOpenAnalytics={() => navigate('/analytics')} />}</Gate>} />
-            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin" element={!authChecked ? PageFallback : auth?.isAdmin ? <AdminPage /> : <Navigate to="/" replace />} />
             <Route path="/privacy" element={<LegalPage doc="privacy" />} />
             <Route path="/terms" element={<LegalPage doc="terms" />} />
             <Route path="*" element={<Navigate to="/" replace />} />

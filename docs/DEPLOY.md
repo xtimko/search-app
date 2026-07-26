@@ -29,14 +29,16 @@ docker --version && docker compose version        # проверка
 cd /opt/stockpoisk
 cat > .env <<'EOF'
 DB_PASSWORD=ПРИДУМАЙ_ДЛИННЫЙ_ПАРОЛЬ
-ADMIN_TOKEN=dev
-VK_APP_ID=ID_ПРИЛОЖЕНИЯ_ВК
-VK_APP_SECRET=ЗАЩИЩЁННЫЙ_КЛЮЧ_ВК
+ADMIN_VK_IDS=ТВОЙ_VK_ID
+VK_APP_ID=54693313
+VK_REDIRECT_URI=https://search-app.ru/api/auth/vk/callback
+SESSION_SECRET=СГЕНЕРИРУЙ_openssl_rand_hex_32
+VK_SERVICE_TOKEN=СЕРВИСНЫЙ_КЛЮЧ_ЕСЛИ_НУЖЕН
 EOF
 ```
 - `DB_PASSWORD` — пароль контейнерного PostgreSQL (любой надёжный).
-- `ADMIN_TOKEN` — пока оставь `dev` (фронт админки шлёт `dev`; смену на секрет см. «Дальше»).
-- `VK_APP_ID` / `VK_APP_SECRET` — из **dev.vk.com** → настройки Mini App (`VK_APP_SECRET` = «Защищённый ключ»). Включают безопасную авторизацию по подписи. Без них — работает общий dev-продавец.
+- `ADMIN_VK_IDS` — числовые VK ID администраторов через запятую. **Доступ к админке — по роли на сессии, а не по общему токену** (старый `ADMIN_TOKEN` удалён). Свой ID узнаёшь так: войди на сайте через ВК → Профиль, там строка «ID …». Впиши его сюда и пересобери — появится раздел «Админ». (Без входа/не из списка → админка отвечает 401/403 и скрыта в меню.)
+- `VK_APP_ID` / `VK_REDIRECT_URI` / `SESSION_SECRET` / `VK_SERVICE_TOKEN` — см. раздел 7 (VK ID). `SESSION_SECRET` = `openssl rand -hex 32`.
 
 ## 4. Запуск
 ```bash
@@ -120,6 +122,5 @@ sudo docker compose exec db pg_dump -U stockpoisk stockpoisk > backup_$(date +%F
 ```
 
 ## Дальше (см. docs/STATUS.md «очередь»)
-- **Безопасная VK-авторизация**: серверная проверка подписи launch-параметров (нужны `app_id`/`secret`).
-- **Реальная аутентификация админа**: сейчас `x-admin-token=dev` зашит во фронт (`frontend/src/api/admin.ts`); перед открытием доступа к админке заменить и задать секретный `ADMIN_TOKEN`.
+- **Платежи + настоящий эскроу** (комиссия со сделок), уведомления, SEO, тесты.
 - Близость по размеру в поиске, lazy-load `xlsx`.
