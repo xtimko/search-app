@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ProfileForm } from './ProfileForm'
 import type { AuthUser } from '../api/auth'
 import { fetchSellerProfile, responseLabel, type SellerProfile } from '../api/sellers'
+import { fetchMySecurity, type LoginEvent } from '../api/auth'
 import { fetchDeals, type DealFull } from '../api/chats'
 import { fetchFavorites } from '../api/favorites'
 import { useFavoritesVersion } from '../favorites'
@@ -26,6 +27,14 @@ function dealSize(l: DealFull['listing']): string {
   return l.sizeUs || l.sizeEu ? [l.sizeUs && `US ${l.sizeUs}`, l.sizeEu && `EU ${l.sizeEu}`].filter(Boolean).join('/') : l.size || ''
 }
 
+// Короткая метка устройства из user-agent (браузер + ОС) — для «недавних входов».
+function deviceLabel(ua: string | null): string {
+  if (!ua) return 'устройство неизвестно'
+  const br = /Firefox/.test(ua) ? 'Firefox' : /Edg/.test(ua) ? 'Edge' : /Chrome/.test(ua) ? 'Chrome' : /Safari/.test(ua) ? 'Safari' : 'браузер'
+  const os = /iPhone|iPad|iOS/.test(ua) ? 'iPhone' : /Android/.test(ua) ? 'Android' : /Windows/.test(ua) ? 'Windows' : /Mac OS X|Macintosh/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : ''
+  return os ? `${br} · ${os}` : br
+}
+
 // Раздел «Профиль»: VK-аккаунт + данные продавца + сделки + рейтинг и отзывы.
 export function ProfilePage({ auth, onLogout, onOpenChat, onOpenAnalytics }: { auth: AuthUser; onLogout: () => void; onOpenChat: (chatId: number) => void; onOpenAnalytics: () => void }) {
   const navigate = useNavigate()
@@ -33,11 +42,13 @@ export function ProfilePage({ auth, onLogout, onOpenChat, onOpenAnalytics }: { a
   const [pub, setPub] = useState<SellerProfile | null>(null)
   const [deals, setDeals] = useState<DealFull[]>([])
   const [favs, setFavs] = useState<CatalogItem[]>([])
+  const [logins, setLogins] = useState<LoginEvent[]>([])
   const favVersion = useFavoritesVersion() // снял сердечко в ряду — список обновится
 
   useEffect(() => {
     fetchSellerProfile(auth.id).then(setPub).catch(() => {})
     fetchDeals().then(setDeals).catch(() => {})
+    fetchMySecurity().then((r) => setLogins(r.logins)).catch(() => {})
   }, [auth.id])
 
   useEffect(() => {
@@ -182,6 +193,26 @@ export function ProfilePage({ auth, onLogout, onOpenChat, onOpenAnalytics }: { a
               <div className="hint">Отзывы появятся после завершённых сделок: покупатель оценивает сделку в разделе «Чаты → Сделки».</div>
             )}
           </>
+        )}
+      </div>
+
+      <div className="section-title">Недавние входы</div>
+      <div className="card">
+        <div className="hint" style={{ marginBottom: logins.length ? 10 : 0 }}>
+          Если видишь вход, который не совершал — смени пароль ВКонтакте и включи двухфакторную защиту.
+        </div>
+        {logins.length === 0 ? (
+          <div className="text-3" style={{ fontSize: 13 }}>пока нет записей</div>
+        ) : (
+          <div style={{ display: 'grid', gap: 6 }}>
+            {logins.map((l, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 10, fontSize: 13, flexWrap: 'wrap' }}>
+                <span className="tnum" style={{ flexShrink: 0 }}>{new Date(l.createdAt).toLocaleString('ru-RU')}</span>
+                <span className="text-2">{deviceLabel(l.userAgent)}</span>
+                {l.ip && <span className="text-3 tnum" style={{ fontSize: 12, marginLeft: 'auto' }}>{l.ip}</span>}
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

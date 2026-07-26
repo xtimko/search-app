@@ -92,7 +92,8 @@
 | Конфиг превью-сервера (для dev-просмотра) | `.claude/launch.json` |
 | **Бэкенд** (Fastify + TS) | `backend/` |
 | — сервер: `/health`, регистрация роутов, раздача SPA (прод), закрытие БД | `backend/src/index.ts` |
-| — VK ID OAuth: login/callback/me/logout | `backend/src/routes/auth.ts` |
+| — VK ID OAuth: login/callback/me/logout + `GET /api/auth/security` (мои входы) | `backend/src/routes/auth.ts` |
+| — аудит-журнал безопасности: `logAudit(req,…)` (входы/выходы, действия модерации) | `backend/src/audit.ts` |
 | — чаты: диалоги по товару, сообщения, unread (`/api/chats*`) | `backend/src/routes/chats.ts` |
 | — сделки: офферы в чате, accept/confirm/cancel, резерв, отзыв, гарант (проверенный/свой/убрать), `GET /api/guarantors` (`/api/deals*`) | `backend/src/routes/deals.ts` |
 | — публичный профиль продавца: метрики/отзывы/товары (`/api/sellers/:id/profile`) | `backend/src/routes/sellers.ts` |
@@ -107,8 +108,8 @@
 | — поиск покупателя: `GET /api/search` (парсер строки + нечёткий поиск pg_trgm + ранжирование + фильтры; документ модели включает расцветки живых офферов — коллабы ищутся с обеих сторон) | `backend/src/routes/search.ts` |
 | — массовый импорт: `POST /api/import/preview`/`commit` | `backend/src/routes/import.ts` |
 | — профиль продавца: `GET`/`PATCH /api/seller/me` | `backend/src/routes/seller.ts` |
-| — админка (доступ по роли: сессия VK ID + `ADMIN_VK_IDS`): модерация (продавцы+verified+детектор клонов) + гаранты + справочник + карточки моделей | `backend/src/routes/admin.ts` |
-| **Схема БД** (PostgreSQL): Category(дерево), Brand, Model(+sku/status/imageUrl+паспорт: colorway/retailPrice/releaseYear/description), Listing, Seller(+verified — «официальный», защита от клонов), Favorite(«Слежу»), Conversation, Message, Deal(+guarantorId), Guarantor(проверенные гаранты), Review, Request(+Response), SearchLog | `prisma/schema.prisma` |
+| — админка (доступ по роли: сессия VK ID + `ADMIN_VK_IDS`): модерация (продавцы+verified+детектор клонов) + гаранты + журнал (`GET /api/admin/audit`) + справочник + карточки моделей | `backend/src/routes/admin.ts` |
+| **Схема БД** (PostgreSQL): Category(дерево), Brand, Model(+sku/status/imageUrl+паспорт: colorway/retailPrice/releaseYear/description), Listing, Seller(+verified — «официальный», защита от клонов), Favorite(«Слежу»), Conversation, Message, Deal(+guarantorId), Guarantor(проверенные гаранты), Review, Request(+Response), SearchLog, AuditLog(журнал безопасности) | `prisma/schema.prisma` |
 | История миграций (init + catalog_revision) | `prisma/migrations/` |
 | Seed справочника (категории + бренды + модели, с алиасами) | `prisma/seed.ts` |
 | Анализ реального чата запросов (спрос, форматы) | `docs/research/vk_chat_analysis.md` |

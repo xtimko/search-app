@@ -151,3 +151,19 @@ export async function deleteGuarantor(id: number) {
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as { error?: string }).error || `HTTP ${res.status}`) }
   return res.json()
 }
+
+// --- Аудит-журнал ---
+export interface AuditEntry {
+  id: number
+  actorName: string | null
+  action: string
+  target: string | null
+  ip: string | null
+  createdAt: string
+}
+
+export async function fetchAudit(): Promise<AuditEntry[]> {
+  const res = await fetch('/api/admin/audit', { headers: headers() })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}

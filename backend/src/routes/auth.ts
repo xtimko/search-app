@@ -3,6 +3,7 @@ import crypto from 'node:crypto'
 import { prisma } from '../db'
 import { createSession, verifySession, SESSION_COOKIE } from '../session'
 import { isAdminVkId } from './listings'
+import { logAudit } from '../audit'
 
 // VK ID OAuth 2.1 (PKCE): /login → id.vk.ru → /callback → сессия в httpOnly-cookie.
 // Серверный (confidential) флоу: обмен кода делает бэкенд, VK-токены в браузер
@@ -129,7 +130,7 @@ export async function authRoutes(app: FastifyInstance) {
         const vkName = [info.user?.first_name, info.user?.last_name].filter(Boolean).join(' ') || null
         const photo = info.user?.avatar || null
 
-        await prisma.seller.upsert({
+        const seller = await prisma.seller.upsert({
           where: { vkId },
           update: { ...(vkName ? { vkName } : {}), ...(photo ? { photo } : {}) },
           create: {
@@ -149,6 +150,7 @@ export async function authRoutes(app: FastifyInstance) {
           secure: isProd,
           maxAge: 30 * 24 * 60 * 60,
         })
+        logAudit(req, { actorId: seller.id, actorName: seller.vkName || seller.nick, action: 'login' })
         return reply.redirect('/')
       } catch (e) {
         // Таймаут/сеть до id.vk.ru или неожиданный ответ — не висим, а падаем с логом.
@@ -173,9 +175,30 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.code(401).send({ error: 'нужен вход через ВК' })
   })
 
-  app.post('/api/auth/logout', async (_req, reply) => {
+  app.post('/api/auth/logout', async (req, reply) => {
+    const vkId = verifySession(req.cookies[SESSION_COOKIE])
+    if (vkId) {
+      const s = await prisma.seller.findUnique({ where: { vkId }, select: { id: true, nick: true, vkName: true } })
+      if (s) logAudit(req, { actorId: s.id, actorName: s.vkName || s.nick, action: 'logout' })
+    }
     reply.clearCookie(SESSION_COOKIE, { path: '/' })
     return { ok: true }
+  })
+
+  // GET /api/auth/security — мои недавние входы (для самоконтроля: заметить чужой
+  // доступ). Отдаём только СВОИ события login, с IP и устройством.
+  app.get('/api/auth/security', async (req, reply) => {
+    const vkId = verifySession(req.cookies[SESSION_COOKIE]) ?? (!isProd ? 1n : null)
+    if (!vkId) return reply.code(401).send({ error: 'нужен вход' })
+    const seller = await prisma.seller.findUnique({ where: { vkId }, select: { id: true } })
+    if (!seller) return reply.code(401).send({ error: 'нужен вход' })
+    const logins = await prisma.auditLog.findMany({
+      where: { actorId: seller.id, action: 'login' },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      select: { createdAt: true, ip: true, userAgent: true },
+    })
+    return { logins }
   })
 
   // Тестовый вход по имени. ВЫКЛЮЧЕН по умолчанию (VK ID подключён) — включается

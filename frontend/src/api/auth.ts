@@ -27,6 +27,19 @@ export async function logout(): Promise<void> {
   await fetch('/api/auth/logout', { method: 'POST' })
 }
 
+// Мои недавние входы (безопасность: заметить чужой доступ).
+export interface LoginEvent {
+  createdAt: string
+  ip: string | null
+  userAgent: string | null
+}
+
+export async function fetchMySecurity(): Promise<{ logins: LoginEvent[] }> {
+  const res = await fetch('/api/auth/security')
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
 export function loginUrl(): string {
   return '/api/auth/vk/login'
 }

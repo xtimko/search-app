@@ -1,7 +1,15 @@
-import type { FastifyInstance } from 'fastify'
+import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { prisma } from '../db'
 import { reattributeSearchLogs } from '../demand'
 import { currentVkId, isAdminVkId } from './listings'
+import { logAudit } from '../audit'
+
+// Актор-админ текущего запроса (для аудит-журнала). Кладётся в хуке onRequest.
+type AdminActor = { id: number; name: string } | null
+const actorOf = (req: FastifyRequest): { actorId: number | null; actorName: string | null } => {
+  const a = (req as unknown as { adminActor?: AdminActor }).adminActor
+  return { actorId: a?.id ?? null, actorName: a?.name ?? null }
+}
 
 // Админ-панель: модерация продавцов + пополнение справочника.
 // Доступ — по РОЛИ на сессии VK ID (vkId в ADMIN_VK_IDS), не по общему токену.
@@ -10,6 +18,9 @@ export async function adminRoutes(app: FastifyInstance) {
     const vkId = currentVkId(req)
     if (!vkId) return reply.code(401).send({ error: 'нужен вход через ВК' })
     if (!isAdminVkId(vkId)) return reply.code(403).send({ error: 'нет прав администратора' })
+    // Кто именно из админов — для журнала (снимок id+имя).
+    const s = await prisma.seller.findUnique({ where: { vkId }, select: { id: true, nick: true, vkName: true } })
+    ;(req as unknown as { adminActor?: AdminActor }).adminActor = s ? { id: s.id, name: s.vkName || s.nick } : null
   })
 
   // Нормализация имени для детектора клонов: регистр, пробелы, только буквы/цифры.
@@ -70,11 +81,15 @@ export async function adminRoutes(app: FastifyInstance) {
     if (typeof b.verified === 'boolean') data.verified = b.verified
     if (Object.keys(data).length === 0) return reply.code(400).send({ error: 'нечего менять' })
 
-    return prisma.seller.update({
+    const updated = await prisma.seller.update({
       where: { id },
       data,
-      select: { id: true, nick: true, status: true, verified: true },
+      select: { id: true, nick: true, vkName: true, status: true, verified: true },
     })
+    const who = updated.vkName || updated.nick
+    if (data.status !== undefined) logAudit(req, { ...actorOf(req), action: 'seller.status', target: `продавец #${id} ${who} → ${data.status}` })
+    if (data.verified !== undefined) logAudit(req, { ...actorOf(req), action: 'seller.verify', target: `продавец #${id} ${who} → ${data.verified ? 'официальный' : 'снята отметка'}` })
+    return updated
   })
 
   // POST /api/admin/brands — добавить бренд в справочник.
@@ -202,11 +217,13 @@ export async function adminRoutes(app: FastifyInstance) {
   // DELETE /api/admin/models/:id — удалить карточку (только если нет объявлений).
   app.delete<{ Params: { id: string } }>('/api/admin/models/:id', async (req, reply) => {
     const id = Number(req.params.id)
+    const model = await prisma.model.findUnique({ where: { id }, select: { name: true, brand: { select: { name: true } } } })
     const cnt = await prisma.listing.count({ where: { modelId: id } })
     if (cnt > 0) return reply.code(400).send({ error: `нельзя удалить: ${cnt} объявлений на этой модели` })
     await prisma.searchLog.updateMany({ where: { modelId: id }, data: { modelId: null } })
     await prisma.request.deleteMany({ where: { modelId: id } })
     await prisma.model.delete({ where: { id } })
+    logAudit(req, { ...actorOf(req), action: 'model.delete', target: model ? `карточка ${model.brand.name} ${model.name} (#${id})` : `карточка #${id}` })
     return { ok: true }
   })
 
@@ -227,6 +244,7 @@ export async function adminRoutes(app: FastifyInstance) {
     const contact = (b.contact ?? '').trim().slice(0, 200)
     if (name.length < 2 || !contact) return reply.code(400).send({ error: 'нужны имя и контакт гаранта' })
     const g = await prisma.guarantor.create({ data: { name, contact, note: (b.note ?? '').trim().slice(0, 200) || null } })
+    logAudit(req, { ...actorOf(req), action: 'guarantor.add', target: `гарант «${name}»` })
     return reply.code(201).send(g)
   })
 
@@ -254,12 +272,24 @@ export async function adminRoutes(app: FastifyInstance) {
   // DELETE /api/admin/guarantors/:id — удалить, если не использовался; иначе скрыть.
   app.delete<{ Params: { id: string } }>('/api/admin/guarantors/:id', async (req, reply) => {
     const id = Number(req.params.id)
+    const g = await prisma.guarantor.findUnique({ where: { id }, select: { name: true } })
     const used = await prisma.deal.count({ where: { guarantorId: id } })
     if (used > 0) {
       await prisma.guarantor.update({ where: { id }, data: { active: false } })
+      logAudit(req, { ...actorOf(req), action: 'guarantor.delete', target: `гарант «${g?.name ?? id}» скрыт (был в сделках)` })
       return { ok: true, hidden: true } // историю сделок не рвём — просто скрыли
     }
     await prisma.guarantor.delete({ where: { id } })
+    logAudit(req, { ...actorOf(req), action: 'guarantor.delete', target: `гарант «${g?.name ?? id}» удалён` })
     return { ok: true }
+  })
+
+  // GET /api/admin/audit — журнал действий (последние 200), новые сверху.
+  app.get('/api/admin/audit', async () => {
+    return prisma.auditLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      select: { id: true, actorName: true, action: true, target: true, ip: true, createdAt: true },
+    })
   })
 }

@@ -185,6 +185,24 @@ model Deal {
   @@index([listingId, status])
 }
 
+// Аудит-журнал безопасности: входы/выходы пользователей и действия админов.
+// Пользователь видит свои входы (заметить чужой доступ), админ — весь журнал
+// модерации (детект при компрометации). actor* — снимок (без FK), чтобы запись
+// оставалась читаемой и после изменений.
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  actorId   Int? // id продавца-инициатора (null — система)
+  actorName String? // имя на момент действия
+  action    String // 'login' | 'logout' | 'seller.status' | 'seller.verify' | 'model.delete' | 'guarantor.add' | 'guarantor.delete'
+  target    String? // человекочитаемая цель («продавец #5 → blocked»)
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+}
+
 // Лог поискового запроса (для аналитики спроса). Пишется при поиске с текстом.
 model SearchLog {
   id        Int      @id @default(autoincrement())

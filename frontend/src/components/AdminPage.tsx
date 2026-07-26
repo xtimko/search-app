@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Autocomplete } from './Autocomplete'
 import { fetchCategories, fetchBrands, type Brand, type Category } from '../api/directory'
-import { fetchSellers, setSellerStatus, setSellerVerified, addBrand, addModel, fetchAdminGuarantors, addGuarantor, updateGuarantor, deleteGuarantor, type AdminSeller, type AdminGuarantor } from '../api/admin'
+import { fetchSellers, setSellerStatus, setSellerVerified, addBrand, addModel, fetchAdminGuarantors, addGuarantor, updateGuarantor, deleteGuarantor, fetchAudit, type AdminSeller, type AdminGuarantor, type AuditEntry } from '../api/admin'
 import { PhotoPicker } from './PhotoPicker'
 import { AdminModelCards } from './AdminModelCards'
 import { VerifiedBadge, vkProfileUrl } from './VerifiedBadge'
@@ -10,6 +10,16 @@ const STATUS: Record<AdminSeller['status'], { text: string; cls: string }> = {
   pending: { text: 'на модерации', cls: 'text-2' },
   approved: { text: 'магазин активен', cls: 'text-success' },
   blocked: { text: 'заблокирован', cls: 'text-danger' },
+}
+
+const ACTION_LABEL: Record<string, string> = {
+  login: 'вход',
+  logout: 'выход',
+  'seller.status': 'статус продавца',
+  'seller.verify': 'отметка «официальный»',
+  'model.delete': 'удаление карточки',
+  'guarantor.add': 'добавлен гарант',
+  'guarantor.delete': 'удалён гарант',
 }
 
 export function AdminPage() {
@@ -27,7 +37,8 @@ export function AdminPage() {
   const [mImage, setMImage] = useState('')
   const [dirMsg, setDirMsg] = useState('')
   const [resetKey, setResetKey] = useState(0)
-  const [section, setSection] = useState<'cards' | 'sellers' | 'directory' | 'guarantors'>('cards')
+  const [section, setSection] = useState<'cards' | 'sellers' | 'directory' | 'guarantors' | 'audit'>('cards')
+  const [audit, setAudit] = useState<AuditEntry[]>([])
 
   const [guarantors, setGuarantors] = useState<AdminGuarantor[]>([])
   const [gName, setGName] = useState('')
@@ -64,6 +75,7 @@ export function AdminPage() {
   useEffect(() => {
     loadSellers()
     loadGuarantors()
+    fetchAudit().then(setAudit).catch(() => {})
     fetchCategories().then(setCategories).catch(() => {})
   }, [])
 
@@ -122,6 +134,7 @@ export function AdminPage() {
         <button className={section === 'cards' ? 'chip chip-active' : 'chip'} onClick={() => setSection('cards')}>Карточки моделей</button>
         <button className={section === 'sellers' ? 'chip chip-active' : 'chip'} onClick={() => setSection('sellers')}>Продавцы</button>
         <button className={section === 'guarantors' ? 'chip chip-active' : 'chip'} onClick={() => setSection('guarantors')}>Гаранты</button>
+        <button className={section === 'audit' ? 'chip chip-active' : 'chip'} onClick={() => setSection('audit')}>Журнал</button>
         <button className={section === 'directory' ? 'chip chip-active' : 'chip'} onClick={() => setSection('directory')}>Справочник</button>
       </div>
 
@@ -212,6 +225,30 @@ export function AdminPage() {
           </div>
         ))}
       </div>
+      </>)}
+
+      {section === 'audit' && (<>
+      <div className="section-title">Журнал действий</div>
+      <div className="hint" style={{ marginBottom: 10 }}>
+        Входы пользователей и действия модерации. Если доступ к админке скомпрометируют — здесь видно, кто и что делал.
+      </div>
+      {audit.length === 0 ? (
+        <p className="text-3">пока пусто</p>
+      ) : (
+        <div style={{ display: 'grid', gap: 6 }}>
+          {audit.map((a) => (
+            <div key={a.id} className="card" style={{ padding: '8px 12px', display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+              <span className="text-3 tnum" style={{ fontSize: 12, flexShrink: 0 }}>{new Date(a.createdAt).toLocaleString('ru-RU')}</span>
+              <span className="badge" style={{ flexShrink: 0 }}>{ACTION_LABEL[a.action] ?? a.action}</span>
+              <span style={{ fontSize: 13, minWidth: 0 }}>
+                <b>{a.actorName ?? '—'}</b>
+                {a.target && <span className="text-2"> · {a.target}</span>}
+              </span>
+              {a.ip && <span className="text-3 tnum" style={{ fontSize: 11, marginLeft: 'auto' }}>{a.ip}</span>}
+            </div>
+          ))}
+        </div>
+      )}
       </>)}
 
       {section === 'directory' && (<>
